@@ -60,7 +60,7 @@
 
         <small class="menu-title">SYSTEM</small>
 
-        <a href="?action=users">
+        <a href="?action=users_list">
             <i class="bi bi-people"></i>
             Users
         </a>
