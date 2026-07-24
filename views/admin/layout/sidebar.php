@@ -1,3 +1,4 @@
+<?php $currentAction = $_GET['action'] ?? '/'; ?>
 <aside class="sidebar">
 
     <!-- Menu -->
@@ -5,62 +6,62 @@
 
         <small class="menu-title">GENERAL</small>
 
-        <a href="?action=dashboard" class="active">
+        <a href="?action=dashboard" class="<?= $currentAction === 'dashboard' ? 'active' : '' ?>">
             <i class="bi bi-speedometer2"></i>
             Dashboard
         </a>
 
         <small class="menu-title">MOVIE</small>
 
-        <a href="?action=movies">
+        <a href="?action=movies" class="<?= $currentAction === 'movies' ? 'active' : '' ?>">
             <i class="bi bi-film"></i>
             Movies
         </a>
 
-        <a href="?action=showtimes">
+        <a href="?action=showtimes" class="<?= $currentAction === 'showtimes' ? 'active' : '' ?>">
             <i class="bi bi-calendar-event"></i>
             Showtimes
         </a>
 
         <small class="menu-title">CINEMA</small>
 
-        <a href="?action=rooms">
+        <a href="?action=rooms" class="<?= $currentAction === 'rooms' ? 'active' : '' ?>">
             <i class="bi bi-door-open"></i>
             Rooms
         </a>
 
-        <a href="?action=room-types">
+        <a href="?action=room-types" class="<?= $currentAction === 'room-types' ? 'active' : '' ?>">
             <i class="bi bi-building"></i>
             Room Types
         </a>
 
-        <a href="?action=seat-types">
+        <a href="?action=seat-types" class="<?= $currentAction === 'seat-types' ? 'active' : '' ?>">
             <i class="bi bi-grid-3x3-gap"></i>
             Seat Types
         </a>
 
         <small class="menu-title">BOOKING</small>
 
-        <a href="?action=bookings">
+        <a href="?action=bookings" class="<?= $currentAction === 'bookings' ? 'active' : '' ?>">
             <i class="bi bi-ticket-perforated"></i>
             Bookings
         </a>
 
-        <a href="?action=payments">
+        <a href="?action=payments" class="<?= $currentAction === 'payments' ? 'active' : '' ?>">
             <i class="bi bi-credit-card"></i>
             Payments
         </a>
 
         <small class="menu-title">SERVICE</small>
 
-        <a href="?action=foods">
+        <a href="?action=foods" class="<?= $currentAction === 'foods' ? 'active' : '' ?>">
             <i class="bi bi-cup-hot"></i>
             Foods
         </a>
 
         <small class="menu-title">SYSTEM</small>
 
-        <a href="?action=users">
+        <a href="?action=users" class="<?= $currentAction === 'users' ? 'active' : '' ?>">
             <i class="bi bi-people"></i>
             Users
         </a>

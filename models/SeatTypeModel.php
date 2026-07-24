@@ -4,7 +4,7 @@ class SeatTypeModel extends BaseModel
     public function getAll()
     {
         $sql = "SELECT seat_types.*,
-                (SELECT COUNT(*) FROM seats WHERE seats.seat_type_id = seat_types.id) AS total_seats
+                       (SELECT COUNT(*) FROM seats WHERE seats.seat_type_id = seat_types.id) AS total_seats
                 FROM seat_types
                 ORDER BY seat_types.id DESC";
         $stmt = $this->pdo->prepare($sql);

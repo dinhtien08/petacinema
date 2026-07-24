@@ -28,9 +28,12 @@
         <?php require 'header.php'; ?>
 
         <main class="content">
-
+        <?php
+            if (isset($view)) {
+                require_once PATH_VIEW . $view . '.php';
+            }
+            ?>
             <!-- Nội dung từng module -->
-
         </main>
 
     </div>
