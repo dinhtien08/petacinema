@@ -12,7 +12,7 @@ class FoodController
 
         $flash = get_flash();
 
-        $view = PATH_VIEW . 'admin/food/list.php';
+        $view = 'admin/food/list';
         require_once PATH_VIEW . 'admin/layout/layout.php';
     }
 
@@ -22,7 +22,7 @@ class FoodController
         $errors = [];
         $old = [];
 
-        $view = PATH_VIEW . 'admin/food/add.php';
+        $view = 'admin/food/add';
         require_once PATH_VIEW . 'admin/layout/layout.php';
     }
 
@@ -78,7 +78,7 @@ class FoodController
         $errors = [];
         $old = $food;
 
-        $view = PATH_VIEW . 'admin/food/edit.php';
+        $view = 'admin/food/edit';
         require_once PATH_VIEW . 'admin/layout/layout.php';
     }
 
