@@ -12,12 +12,14 @@ class UserController
     public function users_list()
     {
         $listUser = $this->userModel->getAll();
-        require_once PATH_VIEW . 'admin/user/list.php';
+        $view = 'admin/user/list';
+        require_once PATH_VIEW . 'admin/layout/layout.php';
     }
 
     public function users_add()
     {
-        require_once PATH_VIEW . 'admin/user/add.php';
+        $view = 'admin/user/add';
+        require_once PATH_VIEW . 'admin/layout/layout.php';
     }
 
     public function users_addUser()
@@ -46,7 +48,8 @@ class UserController
     {
         $id = $_GET['id'];
         $edit = $this->userModel->getById($id);
-        require_once PATH_VIEW . 'admin/user/edit.php';
+        $view = 'admin/user/edit';
+        require_once PATH_VIEW . 'admin/layout/layout.php';
     }
 
     public function users_editUser()

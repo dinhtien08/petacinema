@@ -23,13 +23,18 @@
 
     <?php require 'sidebar.php'; ?>
 
-    <div class="main-wrapper">
+    <div class="admin-wrapper">
 
         <?php require 'header.php'; ?>
 
         <main class="content">
 
             <!-- Nội dung từng module -->
+            <?php
+            if (isset($view)) {
+                require_once PATH_VIEW . $view . '.php';
+            }
+            ?>
 
         </main>
 
