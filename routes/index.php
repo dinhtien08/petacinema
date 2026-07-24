@@ -13,7 +13,8 @@ match ($action) {
     'movie_update' => (new MovieController)->update(),
     'movie_show' => (new MovieController)->show(),
     
-
+    //Dashboard
+    'dashboard' => (new DashboardController)->dashboard(),
     // User
     'users_list'     => (new UserController)->users_list(),
     'users_add'      => (new UserController)->users_add(),
