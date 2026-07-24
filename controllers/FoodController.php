@@ -12,7 +12,7 @@ class FoodController
 
         $flash = get_flash();
 
-        $view = 'admin/food/list';
+        $view = PATH_VIEW . 'admin/food/list.php';
         require_once PATH_VIEW . 'admin/layout/layout.php';
     }
 
@@ -22,7 +22,7 @@ class FoodController
         $errors = [];
         $old = [];
 
-        $view = 'admin/food/add';
+        $view = PATH_VIEW . 'admin/food/add.php';
         require_once PATH_VIEW . 'admin/layout/layout.php';
     }
 
@@ -38,7 +38,7 @@ class FoodController
         $errors = $this->validate($old, $_FILES['image'] ?? null);
 
         if (!empty($errors)) {
-            $view = 'admin/food/add';
+            $view = PATH_VIEW . 'admin/food/add.php';
             require_once PATH_VIEW . 'admin/layout/layout.php';
             return;
         }
@@ -78,7 +78,7 @@ class FoodController
         $errors = [];
         $old = $food;
 
-        $view = 'admin/food/edit';
+        $view = PATH_VIEW . 'admin/food/edit.php';
         require_once PATH_VIEW . 'admin/layout/layout.php';
     }
 
@@ -107,7 +107,7 @@ class FoodController
         $errors = $this->validate($old, $_FILES['image'] ?? null);
 
         if (!empty($errors)) {
-            $view = 'admin/food/edit';
+            $view = PATH_VIEW . 'admin/food/edit.php';
             require_once PATH_VIEW . 'admin/layout/layout.php';
             return;
         }
