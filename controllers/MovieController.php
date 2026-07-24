@@ -6,7 +6,7 @@ class MovieController
         $movieModel = new MovieModel();
         $movies = $movieModel->getAll();
         // debug($movies);
-        $view = 'admin/movie/list';
+        $view ='admin/movie/list';
         require_once PATH_VIEW . 'admin/layout/layout.php';
     }
     public function delete()
