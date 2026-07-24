@@ -47,7 +47,7 @@
                                 <form action="?action=food_variant_delete" method="post" class="d-inline">
                                     <input type="hidden" name="id" value="<?= (int) $variant['id'] ?>">
                                     <input type="hidden" name="food_id" value="<?= (int) $food['id'] ?>">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Bạn có chắc chắn muốn xóa dữ liệu này?')">
                                         <i class="bi bi-trash"></i> Xóa
                                     </button>
                                 </form>

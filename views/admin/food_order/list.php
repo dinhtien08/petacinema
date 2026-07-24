@@ -50,7 +50,7 @@
                                 </a>
                                 <form action="?action=food_order_delete" method="post" class="d-inline">
                                     <input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Bạn có chắc chắn muốn xóa dữ liệu này?')">
                                         <i class="bi bi-trash"></i> Xóa
                                     </button>
                                 </form>

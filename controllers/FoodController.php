@@ -132,10 +132,10 @@ class FoodController
     // POST ?action=food_delete&id=
     public function delete()
     {
+        
         $id = (int) ($_GET['id'] ?? $_POST['id'] ?? 0);
-
         $foodModel = new FoodModel();
-
+    
         try {
             $foodModel->deleteFood($id);
             set_flash('success', 'Xóa món ăn thành công.');
