@@ -3,7 +3,6 @@
 class FoodModel extends BaseModel
 {
     protected $table = "foods";
-
     // Danh sách food kèm số biến thể + khoảng giá (JOIN food_variants)
     public function getAll()
     {
@@ -66,7 +65,6 @@ class FoodModel extends BaseModel
         $stmt = $this->pdo->prepare($sql);
         $stmt->bindParam(':food_id', $id, PDO::PARAM_INT);
         $stmt->execute();
-
         $sql = "DELETE FROM {$this->table} WHERE id = :id";
         $stmt = $this->pdo->prepare($sql);
         $stmt->bindParam(':id', $id, PDO::PARAM_INT);

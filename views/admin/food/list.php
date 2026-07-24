@@ -5,9 +5,6 @@
         <h4 class="mb-0">Quản lý món ăn (Foods)</h4>
 
         <div class="d-flex gap-2">
-            <a href="?action=dashboard" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left"></i> Quay lại
-            </a>
             <a href="?action=food_add" class="btn btn-danger">
                 <i class="bi bi-plus-lg"></i> Thêm mới
             </a>
@@ -71,7 +68,7 @@
                                 </a>
                                 <form action="?action=food_delete" method="post" class="d-inline">
                                     <input type="hidden" name="id" value="<?= (int) $food['id'] ?>">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Bạn có chắc chắn muốn xóa dữ liệu này?')">
                                         <i class="bi bi-trash"></i> Xóa
                                     </button>
                                 </form>
