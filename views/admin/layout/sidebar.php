@@ -15,7 +15,7 @@ $currentAction = $_GET['action'] ?? '';
 
         <small class="menu-title">MOVIE</small>
 
-        <a href="?action=movies" class="<?= (strpos($currentAction, 'movies') === 0) ? 'active' : '' ?>">
+        <a href="?action=movie_list" class="<?= (strpos($currentAction, 'movie') === 0) ? 'active' : '' ?>">
             <i class="bi bi-film"></i>
             Movies
         </a>
@@ -56,7 +56,7 @@ $currentAction = $_GET['action'] ?? '';
 
         <small class="menu-title">SERVICE</small>
 
-        <a href="?action=food_list">
+        <a href="?action=food_list" class="<?= (strpos($currentAction, 'food') === 0) ? 'active' : '' ?>">
             <i class="bi bi-cup-hot"></i>
             Foods
         </a>
