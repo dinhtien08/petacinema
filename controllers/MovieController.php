@@ -166,7 +166,7 @@ class MovieController
         // Có lỗi -> quay lại edit
         if (!empty($errors)) {
 
-            $view = PATH_VIEW . 'admin/movie/edit.php';
+            $view = 'admin/movie/edit';
 
             require PATH_VIEW . 'admin/layout/layout.php';
 
