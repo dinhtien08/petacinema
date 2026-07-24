@@ -56,7 +56,7 @@ $currentAction = $_GET['action'] ?? '';
 
         <small class="menu-title">SERVICE</small>
 
-        <a href="?action=foods" class="<?= (strpos($currentAction, 'foods') === 0) ? 'active' : '' ?>">
+        <a href="?action=food_list">
             <i class="bi bi-cup-hot"></i>
             Foods
         </a>
