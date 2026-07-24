@@ -4,7 +4,6 @@ $action = $_GET['action'] ?? '/';
 
 match ($action) {
     '/'                   => (new MovieController)->index(),
-
     // Rooms
     'rooms'               => (new RoomController)->list(),
     'roomAdd'             => (new RoomController)->add(),

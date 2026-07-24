@@ -4,7 +4,7 @@ class RoomTypeModel extends BaseModel
     public function getAll()
     {
         $sql = "SELECT room_types.*,
-                       (SELECT COUNT(*) FROM rooms WHERE rooms.room_type_id = room_types.id) AS total_rooms
+                (SELECT COUNT(*) FROM rooms WHERE rooms.room_type_id = room_types.id) AS total_rooms
                 FROM room_types
                 ORDER BY room_types.id DESC";
         $stmt = $this->pdo->prepare($sql);
