@@ -4,7 +4,7 @@
         <p class="text-muted mb-0">Quản lý danh sách phim</p>
     </div>
 
-    <a href="<?= BASE_URL ?>?act=movie-create" class="btn btn-danger">
+    <a href="<?= BASE_URL ?>?action=movie-create" class="btn btn-danger">
         <i class="bi bi-plus-lg me-1"></i>
         Thêm phim
     </a>
@@ -93,7 +93,7 @@
                                 <td class="text-end pe-4">
 
                                     <a
-                                        href="<?= BASE_URL ?>?act=movie-show&id=<?= $movie['id'] ?>"
+                                        href="<?= BASE_URL ?>?action=movie-show&id=<?= $movie['id'] ?>"
                                         class="btn btn-sm btn-outline-info me-1"
                                         title="Chi tiết">
 
@@ -102,7 +102,7 @@
                                     </a>
 
                                     <a
-                                        href="<?= BASE_URL ?>?act=movie-edit&id=<?= $movie['id'] ?>"
+                                        href="<?= BASE_URL ?>?action=movie-edit&id=<?= $movie['id'] ?>"
                                         class="btn btn-sm btn-outline-primary me-1"
                                         title="Sửa">
 
@@ -111,7 +111,7 @@
                                     </a>
 
                                     <a
-                                        href="<?= BASE_URL ?>?act=movie-delete&id=<?= $movie['id'] ?>"
+                                        href="<?= BASE_URL ?>?action=movie-delete&id=<?= $movie['id'] ?>"
                                         class="btn btn-sm btn-outline-danger"
                                         onclick="return confirm('Bạn có chắc muốn xóa phim này?')"
                                         title="Xóa">
