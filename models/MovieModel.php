@@ -80,4 +80,30 @@ class MovieModel extends BaseModel
 
         return $stmt->execute($data);
     }
+    public function getMovieList()
+    {
+        $sql = "SELECT id, title, duration
+                FROM movies
+                WHERE status <> 'ended'
+                ORDER BY title";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute();
+
+        return $stmt->fetchAll();
+    }
+    public function findById($id)
+    {
+        $sql = "SELECT *
+                FROM movies
+                WHERE id = :id";
+
+        $stmt = $this->pdo->prepare($sql);
+
+        $stmt->bindParam(':id', $id);
+
+        $stmt->execute();
+
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
 }

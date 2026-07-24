@@ -77,4 +77,14 @@ match ($action) {
     'booking_edit'         => (new BookingController)->edit(),
     'booking_editPost'     => (new BookingController)->editPost(),
     'booking_delete'       => (new BookingController)->delete(),
+    // showtime
+    'showtimes' => (new ShowtimeController)->list(),
+    'showtime_show' => (new ShowtimeController)->show(),
+    'showtime_create' => (new ShowtimeController)->create(),
+    'showtime_store' => (new ShowtimeController)->store(),
+    'showtime_edit' => (new ShowtimeController)->edit(),
+    'showtime_update' => (new ShowtimeController)->update(),
+    'showtime_delete' => (new ShowtimeController)->delete(),
+    
+
 };
