@@ -3,8 +3,7 @@
 $action = $_GET['action'] ?? '/';
 
 match ($action) {
-    '/'                   => (new MovieController)->index(),
-
+    '/'         => (new HomeController)->index(),
     // Rooms
     'rooms'               => (new RoomController)->list(),
     'roomAdd'             => (new RoomController)->add(),
@@ -28,7 +27,6 @@ match ($action) {
     'seatTypeEdit'        => (new SeatTypeController)->edit(),
     'seatTypeEditProcess' => (new SeatTypeController)->editProcess(),
     'seatTypeDelete'      => (new SeatTypeController)->delete(),
-    '/'         => (new HomeController)->index(),
     // Movie
     'movie_list'         => (new MovieController)->list(),
     'movie_delete' => (new MovieController)->delete(),
