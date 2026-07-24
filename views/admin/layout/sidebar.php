@@ -49,7 +49,10 @@ $currentAction = $_GET['action'] ?? '';
             Bookings
         </a>
 
-        <a href="?action=payments" class="<?= (strpos($currentAction, 'payments') === 0) ? 'active' : '' ?>">
+
+        <small class="menu-title">PAYMENT</small>
+
+        <a href="?action=payment_list" class="<?= (strpos($currentAction, 'payment_') === 0) ? 'active' : '' ?>">
             <i class="bi bi-credit-card"></i>
             Payments
         </a>
