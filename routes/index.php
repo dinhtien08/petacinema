@@ -46,4 +46,12 @@ match ($action) {
     'food_order_edit'         => (new FoodOrderController)->edit(),
     'food_order_editPost'     => (new FoodOrderController)->editPost(),
     'food_order_delete'       => (new FoodOrderController)->delete(),
+
+    // Booking
+    'booking_list'         => (new BookingController)->list(),
+    'booking_add'          => (new BookingController)->add(),
+    'booking_addPost'      => (new BookingController)->addPost(),
+    'booking_edit'         => (new BookingController)->edit(),
+    'booking_editPost'     => (new BookingController)->editPost(),
+    'booking_delete'       => (new BookingController)->delete(),
 };

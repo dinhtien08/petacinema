@@ -44,7 +44,7 @@ $currentAction = $_GET['action'] ?? '';
 
         <small class="menu-title">BOOKING</small>
 
-        <a href="?action=bookings" class="<?= (strpos($currentAction, 'bookings') === 0) ? 'active' : '' ?>">
+        <a href="?action=booking_list" class="<?= (strpos($currentAction, 'booking') === 0) ? 'active' : '' ?>">
             <i class="bi bi-ticket-perforated"></i>
             Bookings
         </a>
