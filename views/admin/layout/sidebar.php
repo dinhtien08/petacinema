@@ -53,7 +53,7 @@
 
         <small class="menu-title">SERVICE</small>
 
-        <a href="?action=foods">
+        <a href="?action=food_list">
             <i class="bi bi-cup-hot"></i>
             Foods
         </a>
