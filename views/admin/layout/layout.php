@@ -29,7 +29,7 @@
 
         <main class="content">
 
-            <!-- Nội dung từng module -->
+            <?php if (isset($view)) { require_once PATH_VIEW . $view . '.php'; } ?>
 
         </main>
 
