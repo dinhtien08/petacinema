@@ -4,7 +4,7 @@
         <p class="text-muted mb-0">Quản lý danh sách phim</p>
     </div>
 
-    <a href="<?= BASE_URL ?>?action=movie-create" class="btn btn-danger">
+    <a href="<?= BASE_URL ?>?action=movie_create" class="btn btn-danger">
         <i class="bi bi-plus-lg me-1"></i>
         Thêm phim
     </a>
@@ -25,6 +25,7 @@
                         <th>Thể loại</th>
                         <th>Thời lượng</th>
                         <th>Ngày khởi chiếu</th>
+                        <th>Độ tuổi</th>
                         <th>Trạng thái</th>
                         <th class="text-end pe-4">Thao tác</th>
                     </tr>
@@ -83,17 +84,34 @@
                                 <td>
                                     <?= date('d/m/Y', strtotime($movie['release_date'])) ?>
                                 </td>
+                                <td>
+                                    <?php
+                                    $ageClass = match ($movie['age_rating']) {
+                                        'P'   => 'bg-success',
+                                        'K'   => 'bg-info text-dark',
+                                        'T13' => 'bg-warning text-dark',
+                                        'T16' => 'bg-primary',
+                                        'T18' => 'bg-danger',
+                                        'C'   => 'bg-dark',
+                                        default => 'bg-secondary',
+                                    };
+                                    ?>
 
+                                    <span class="badge <?= $ageClass ?>">
+                                        <?= $movie['age_rating'] ?>
+                                    </span>
+                                </td>
                                 <td>
                                     <span class="badge <?= $statusClass ?>">
                                         <?= $statusLabel ?>
                                     </span>
                                 </td>
+                                
 
                                 <td class="text-end pe-4">
 
                                     <a
-                                        href="<?= BASE_URL ?>?action=movie-show&id=<?= $movie['id'] ?>"
+                                        href="<?= BASE_URL ?>?action=movie_show&id=<?= $movie['id'] ?>"
                                         class="btn btn-sm btn-outline-info me-1"
                                         title="Chi tiết">
 
@@ -102,7 +120,7 @@
                                     </a>
 
                                     <a
-                                        href="<?= BASE_URL ?>?action=movie-edit&id=<?= $movie['id'] ?>"
+                                        href="<?= BASE_URL ?>?action=movie_edit&id=<?= $movie['id'] ?>"
                                         class="btn btn-sm btn-outline-primary me-1"
                                         title="Sửa">
 
@@ -111,7 +129,7 @@
                                     </a>
 
                                     <a
-                                        href="<?= BASE_URL ?>?action=movie-delete&id=<?= $movie['id'] ?>"
+                                        href="<?= BASE_URL ?>?action=movie_delete&id=<?= $movie['id'] ?>"
                                         class="btn btn-sm btn-outline-danger"
                                         onclick="return confirm('Bạn có chắc muốn xóa phim này?')"
                                         title="Xóa">
