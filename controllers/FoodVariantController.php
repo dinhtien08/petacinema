@@ -6,10 +6,8 @@ class FoodVariantController
     public function list()
     {
         $foodId = (int) ($_GET['food_id'] ?? 0);
-
         $foodModel = new FoodModel();
         $food = $foodModel->getById($foodId);
-
         if (!$food) {
             set_flash('error', 'Không tìm thấy món ăn.');
             header('Location: ?action=food_list');
@@ -18,10 +16,8 @@ class FoodVariantController
 
         $variantModel = new FoodVariantModel();
         $variants = $variantModel->getByFoodId($foodId);
-
         $flash = get_flash();
-
-        $view = PATH_VIEW . 'admin/food_variant/list.php';
+        $view = 'admin/food_variant/list';
         require_once PATH_VIEW . 'admin/layout/layout.php';
     }
 
@@ -29,9 +25,9 @@ class FoodVariantController
     public function add()
     {
         $foodId = (int) ($_GET['food_id'] ?? 0);
-
         $foodModel = new FoodModel();
         $food = $foodModel->getById($foodId);
+
         if (!$food) {
             set_flash('error', 'Không tìm thấy món ăn.');
             header('Location: ?action=food_list');
@@ -40,7 +36,7 @@ class FoodVariantController
 
         $errors = [];
         $old = ['food_id' => $foodId];
-        $view = PATH_VIEW . 'admin/food_variant/add.php';
+        $view = 'admin/food_variant/add';
         require_once PATH_VIEW . 'admin/layout/layout.php';
     }
 
@@ -65,7 +61,7 @@ class FoodVariantController
 
         $errors = $this->validate($old);
         if (!empty($errors)) {
-            $view = PATH_VIEW . 'admin/food_variant/add.php';
+            $view = 'admin/food_variant/add';
             require_once PATH_VIEW . 'admin/layout/layout.php';
             return;
         }
@@ -90,7 +86,7 @@ class FoodVariantController
         }
         $errors = [];
         $old = $variant;
-        $view = PATH_VIEW . 'admin/food_variant/edit.php';
+        $view = 'admin/food_variant/edit';
         require_once PATH_VIEW . 'admin/layout/layout.php';
     }
 
@@ -116,7 +112,7 @@ class FoodVariantController
         $errors = $this->validate($old);
         if (!empty($errors)) {
             $old['food_name'] = $variant['food_name'];
-            $view = PATH_VIEW . 'admin/food_variant/edit.php';
+            $view = 'admin/food_variant/edit';
             require_once PATH_VIEW . 'admin/layout/layout.php';
             return;
         }

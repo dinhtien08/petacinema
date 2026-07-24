@@ -10,7 +10,7 @@ class FoodOrderController
 
         $flash = get_flash();
 
-        $view = PATH_VIEW . 'admin/food_order/list.php';
+        $view = 'admin/food_order/list';
         require_once PATH_VIEW . 'admin/layout/layout.php';
     }
 
@@ -54,7 +54,7 @@ class FoodOrderController
             'price_at_booking' => $variant['price'] ?? '',
         ];
 
-        $view = PATH_VIEW . 'admin/food_order/add.php';
+        $view = 'admin/food_order/add';
         require_once PATH_VIEW . 'admin/layout/layout.php';
     }
 
@@ -90,7 +90,7 @@ class FoodOrderController
             $variants = $variantModel->getByFoodId($foodId);
             $stage = 3;
 
-            $view = PATH_VIEW . 'admin/food_order/add.php';
+            $view = 'admin/food_order/add';
             require_once PATH_VIEW . 'admin/layout/layout.php';
             return;
         }
@@ -154,7 +154,7 @@ class FoodOrderController
             'price_at_booking' => $order['price_at_booking'],
         ];
 
-        $view = PATH_VIEW . 'admin/food_order/edit.php';
+        $view = 'admin/food_order/edit';
         require_once PATH_VIEW . 'admin/layout/layout.php';
     }
 
@@ -202,7 +202,7 @@ class FoodOrderController
             $variants = $variantModel->getByFoodId($foodId);
             $stage = 3;
 
-            $view = PATH_VIEW . 'admin/food_order/edit.php';
+            $view = 'admin/food_order/edit';
             require_once PATH_VIEW . 'admin/layout/layout.php';
             return;
         }
