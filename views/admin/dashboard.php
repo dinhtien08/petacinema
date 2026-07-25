@@ -223,7 +223,7 @@ if (empty($recentBookings)) {
 
 $statCards = [
     ['label' => 'Users',     'value' => number_format($totalUsers),     'icon' => 'bi-people-fill',           'theme' => 'green',  'link' => '?action=users_list',     'growth' => $userGrowth],
-    ['label' => 'Movies',    'value' => number_format($totalMovies),    'icon' => 'bi-film',                  'theme' => 'blue',   'link' => '?action=movies',         'growth' => $movieGrowth],
+    ['label' => 'Movies',    'value' => number_format($totalMovies),    'icon' => 'bi-film',                  'theme' => 'blue',   'link' => '?action=movie_list',         'growth' => $movieGrowth],
     ['label' => 'Bookings',  'value' => number_format($totalBookings),  'icon' => 'bi-ticket-perforated-fill','theme' => 'orange', 'link' => '?action=bookings',       'growth' => $bookingGrowth],
     ['label' => 'Revenue',   'value' => number_format($totalRevenue) . 'đ', 'icon' => 'bi-cash-stack',      'theme' => 'red',    'link' => '?action=payments',       'growth' => $revenueGrowth],
     ['label' => 'Rooms',     'value' => number_format($totalRooms),     'icon' => 'bi-building',              'theme' => 'purple', 'link' => '?action=rooms',          'growth' => ['text' => '— Không đổi', 'class' => 'text-muted', 'icon' => 'bi-dash']],
