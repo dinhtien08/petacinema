@@ -80,5 +80,16 @@ class RoomModel extends BaseModel
         $stmt->bindParam('id', $id);
         $stmt->execute();
     }
+    public function getRoomList()
+    {
+        $sql = "SELECT id, name
+                FROM rooms
+                ORDER BY name";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute();
+
+        return $stmt->fetchAll();
+    }
 }
 ?>

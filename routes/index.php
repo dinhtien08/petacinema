@@ -83,4 +83,14 @@ match ($action) {
     'payment_detail'       => (new PaymentController)->payment_detail(),
     'payment_edit'         => (new PaymentController)->payment_edit(),
     'payment_update'       => (new PaymentController)->payment_update(),
+    // showtime
+    'showtimes' => (new ShowtimeController)->list(),
+    'showtime_show' => (new ShowtimeController)->show(),
+    'showtime_create' => (new ShowtimeController)->create(),
+    'showtime_store' => (new ShowtimeController)->store(),
+    'showtime_edit' => (new ShowtimeController)->edit(),
+    'showtime_update' => (new ShowtimeController)->update(),
+    'showtime_delete' => (new ShowtimeController)->delete(),
+    
+
 };

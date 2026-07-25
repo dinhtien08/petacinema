@@ -108,37 +108,22 @@
                                 </td>
                                 
 
-                                <td class="text-end pe-4">
+                                <td class="text-end pe-4 text-nowrap" style="width:170px;">
+    <div class="d-inline-flex gap-1">
+        <a href="<?= BASE_URL ?>?action=movie_show&id=<?= $movie['id'] ?>" class="btn btn-sm btn-outline-info">
+            <i class="bi bi-eye"></i>
+        </a>
 
-                                    <a
-                                        href="<?= BASE_URL ?>?action=movie_show&id=<?= $movie['id'] ?>"
-                                        class="btn btn-sm btn-outline-info me-1"
-                                        title="Chi tiết">
+        <a href="<?= BASE_URL ?>?action=movie_edit&id=<?= $movie['id'] ?>" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-pencil"></i>
+        </a>
 
-                                        <i class="bi bi-eye"></i>
-
-                                    </a>
-
-                                    <a
-                                        href="<?= BASE_URL ?>?action=movie_edit&id=<?= $movie['id'] ?>"
-                                        class="btn btn-sm btn-outline-primary me-1"
-                                        title="Sửa">
-
-                                        <i class="bi bi-pencil"></i>
-
-                                    </a>
-
-                                    <a
-                                        href="<?= BASE_URL ?>?action=movie_delete&id=<?= $movie['id'] ?>"
-                                        class="btn btn-sm btn-outline-danger"
-                                        onclick="return confirm('Bạn có chắc muốn xóa phim này?')"
-                                        title="Xóa">
-
-                                        <i class="bi bi-trash"></i>
-
-                                    </a>
-
-                                </td>
+        <a href="<?= BASE_URL ?>?action=movie_delete&id=<?= $movie['id'] ?>" class="btn btn-sm btn-outline-danger"
+            onclick="return confirm('Bạn có chắc muốn xóa phim này?')">
+            <i class="bi bi-trash"></i>
+        </a>
+    </div>
+</td>
 
                             </tr>
 
