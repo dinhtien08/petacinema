@@ -11,6 +11,9 @@ match ($action) {
     'roomEdit'            => (new RoomController)->edit(),
     'roomEditProcess'     => (new RoomController)->editProcess(),
     'roomDelete'          => (new RoomController)->delete(),
+    'roomSeats'           => (new RoomController)->seats(),
+    'roomGenerateSeats'   => (new RoomController)->generateSeats(),
+    'roomToggleSeat' => (new RoomController())->toggleSeat(),
 
     // Room Types
     'room-types'          => (new RoomTypeController)->list(),
@@ -81,8 +84,7 @@ match ($action) {
     // Payment
     'payment_list'         => (new PaymentController)->payment_list(),
     'payment_detail'       => (new PaymentController)->payment_detail(),
-    'payment_edit'         => (new PaymentController)->payment_edit(),
-    'payment_update'       => (new PaymentController)->payment_update(),
+
     // showtime
     'showtimes' => (new ShowtimeController)->list(),
     'showtime_show' => (new ShowtimeController)->show(),
