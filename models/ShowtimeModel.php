@@ -143,9 +143,7 @@ class ShowtimeModel extends BaseModel
         return $stmt->fetchColumn();
     }
 
-    /**
-     * Kiểm tra đã có booking chưa
-     */
+   
     public function getDetail($id)
     {
         $sql = "SELECT
@@ -187,6 +185,9 @@ class ShowtimeModel extends BaseModel
 
         return $stmt->rowCount() > 0;
     }
+     /**
+     * Kiểm tra đã có booking chưa
+     */
     public function hasBooking($showtimeId)
     {
         $sql = "

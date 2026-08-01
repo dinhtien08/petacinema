@@ -109,21 +109,12 @@
                                     <?= !empty($payment['payment_time']) ? date('d/m/Y H:i', strtotime($payment['payment_time'])) : '—' ?>
                                 </td>
                                 <td class="text-end pe-4">
-
                                     <a
                                         href="<?= BASE_URL ?>?action=payment_detail&id=<?= $payment['id'] ?>"
-                                        class="btn btn-sm btn-outline-info me-1"
+                                        class="btn btn-sm btn-outline-info"
                                         title="Detail">
                                         <i class="bi bi-eye"></i>
                                     </a>
-
-                                    <a
-                                        href="<?= BASE_URL ?>?action=payment_edit&id=<?= $payment['id'] ?>"
-                                        class="btn btn-sm btn-outline-primary"
-                                        title="Edit">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
-
                                 </td>
                             </tr>
 

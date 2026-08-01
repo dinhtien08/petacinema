@@ -7,6 +7,7 @@ define('PATH_ROOT',         __DIR__ . '/../');
 define('PATH_VIEW',         PATH_ROOT . 'views/');
 
 define('PATH_VIEW_MAIN',    PATH_ROOT . 'views/main.php');
+define('PATH_VIEW_ADMIN',   PATH_ROOT . 'views/admin/');
 
 define('BASE_ASSETS', BASE_URL . 'assets/');
 

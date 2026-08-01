@@ -61,13 +61,6 @@
                 </tr>
             </tbody>
         </table>
-
-        <div class="mt-4">
-            <a href="<?= BASE_URL ?>?action=payment_edit&id=<?= $payment['id'] ?>" class="btn btn-danger">
-                <i class="bi bi-pencil me-1"></i>
-                Cập nhật trạng thái
-            </a>
-        </div>
-
     </div>
 </div>
+
