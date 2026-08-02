@@ -21,7 +21,7 @@
         <table class="table table-bordered align-middle">
             <thead class="table-light">
                 <tr>
-                    <th>ID</th>
+                    <th>STT</th>
                     <th>Booking</th>
                     <th>Món ăn</th>
                     <th>Kích cỡ</th>
@@ -36,9 +36,10 @@
                         <td colspan="7" class="text-center text-muted">Chưa có đơn món ăn nào.</td>
                     </tr>
                 <?php else: ?>
+                    <?php $stt = 1; ?>
                     <?php foreach ($orders as $order): ?>
                         <tr>
-                            <td><?= h($order['id']) ?></td>
+                            <td><?= $stt++ ?></td>
                             <td><?= h($order['booking_code'] ?? ('#' . $order['booking_id'])) ?></td>
                             <td><?= h($order['food_name']) ?></td>
                             <td><?= h($order['variant_size']) ?></td>

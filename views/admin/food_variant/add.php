@@ -2,7 +2,7 @@
 
     <div class="d-flex align-items-center justify-content-between mb-3">
 
-        <h4 class="mb-0">Thêm biến thể cho món: <?= h($food['name']) ?></h4>
+        <h4 class="mb-0">Thêm size cho món: <?= h($food['name']) ?></h4>
 
         <a href="?action=food_variant_list&food_id=<?= (int) $food['id'] ?>" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left"></i> Quay lại
