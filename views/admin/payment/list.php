@@ -65,7 +65,7 @@
 
                 <thead class="table-light">
                     <tr>
-                        <th class="ps-4">ID</th>
+                        <th class="ps-4">STT</th>
                         <th>Transaction Code</th>
                         <th>Payment Method</th>
                         <th>Amount</th>
@@ -78,7 +78,7 @@
                 <tbody>
 
                     <?php if (!empty($payments)) : ?>
-
+                        <?php $stt = 1; ?>
                         <?php foreach ($payments as $payment) : ?>
 
                             <?php
@@ -98,7 +98,7 @@
                             ?>
 
                             <tr>
-                                <td class="ps-4"><?= $payment['id'] ?></td>
+                                <td class="ps-4"><?= $stt++ ?></td>
                                 <td class="fw-semibold"><?= htmlspecialchars($payment['transaction_code'] ?? '') ?></td>
                                 <td><?= htmlspecialchars($payment['payment_method'] ?? '') ?></td>
                                 <td><?= number_format((float) $payment['amount'], 0, ',', '.') ?> VNĐ</td>
