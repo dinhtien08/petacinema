@@ -21,7 +21,17 @@ class ShowtimeModel extends BaseModel
                     ON s.movie_id = m.id
                 INNER JOIN rooms r
                     ON s.room_id = r.id
-                ORDER BY s.start_time DESC";
+                ORDER BY
+                    CASE
+                        WHEN s.end_time >= NOW() THEN 1
+                        ELSE 2
+                    END ASC,
+                    CASE
+                        WHEN s.end_time >= NOW() THEN s.start_time
+                    END ASC,
+                    CASE
+                        WHEN s.end_time < NOW() THEN s.start_time
+                    END DESC";
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute();
@@ -257,7 +267,17 @@ class ShowtimeModel extends BaseModel
             $params[':date'] = $date;
         }
 
-        $sql .= " ORDER BY s.start_time DESC";
+        $sql .= " ORDER BY
+            CASE
+                WHEN s.end_time >= NOW() THEN 1
+                ELSE 2
+            END ASC,
+            CASE
+                WHEN s.end_time >= NOW() THEN s.start_time
+            END ASC,
+            CASE
+                WHEN s.end_time < NOW() THEN s.start_time
+            END DESC";
 
         $stmt = $this->pdo->prepare($sql);
         foreach ($params as $key => $val) {
