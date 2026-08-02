@@ -11,7 +11,8 @@ class UserController
 
     public function users_list()
     {
-        $listUser = $this->userModel->getAll();
+        $keyword = trim($_GET['keyword'] ?? '');
+        $listUser = $this->userModel->searchAndFilter($keyword);
         $view = 'admin/user/list';
         require_once PATH_VIEW . 'admin/layout/layout.php';
     }

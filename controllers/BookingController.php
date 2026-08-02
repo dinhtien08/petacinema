@@ -5,8 +5,9 @@ class BookingController
     // GET ?action=booking_list
     public function list()
     {
+        $keyword = trim($_GET['keyword'] ?? '');
         $bookingModel = new BookingModel();
-        $bookings = $bookingModel->getAll();
+        $bookings = $bookingModel->searchAndFilter($keyword);
         $flash = get_flash();
         $view = 'admin/booking/list';
         require_once PATH_VIEW . 'admin/layout/layout.php';

@@ -31,6 +31,7 @@ match ($action) {
     'seatTypeEditProcess' => (new SeatTypeController)->editProcess(),
     'seatTypeDelete'      => (new SeatTypeController)->delete(),
     // Movie
+    'movies'             => (new MovieController)->list(),
     'movie_list'         => (new MovieController)->list(),
     'movie_delete' => (new MovieController)->delete(),
     'movie_create' => (new MovieController)->create(),
@@ -42,6 +43,7 @@ match ($action) {
     //Dashboard
     'dashboard' => (new DashboardController)->dashboard(),
     // User
+    'users'          => (new UserController)->users_list(),
     'users_list'     => (new UserController)->users_list(),
     'users_add'      => (new UserController)->users_add(),
     'users_addUser'  => (new UserController)->users_addUser(),
@@ -74,6 +76,7 @@ match ($action) {
     'food_order_delete'       => (new FoodOrderController)->delete(),
 
     // Booking
+    'bookings'             => (new BookingController)->list(),
     'booking_list'         => (new BookingController)->list(),
     'booking_add'          => (new BookingController)->add(),
     'booking_addPost'      => (new BookingController)->addPost(),

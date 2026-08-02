@@ -16,6 +16,17 @@
     </div>
 <?php endif; ?>
 
+<?php
+$keyword = $_GET['keyword'] ?? '';
+?>
+
+<?php if (!empty($keyword)) : ?>
+    <div class="alert alert-info py-2 mb-3">
+        <i class="bi bi-info-circle me-1"></i>
+        Showing <?= count($bookings) ?> result(s) for "<strong><?= htmlspecialchars($keyword) ?></strong>"
+    </div>
+<?php endif; ?>
+
 <div class="card">
     <div class="card-body p-0">
 
@@ -96,7 +107,12 @@
                     <?php else : ?>
 
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-5">Chưa có booking nào.</td>
+                            <td colspan="8" class="text-center py-4">
+                                <div class="alert alert-warning mb-0 d-inline-block px-4" role="alert">
+                                    <i class="bi bi-exclamation-triangle me-2"></i>
+                                    No matching data found.
+                                </div>
+                            </td>
                         </tr>
 
                     <?php endif; ?>
