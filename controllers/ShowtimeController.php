@@ -5,12 +5,14 @@ class ShowtimeController
     private $showtimeModel;
     private $movieModel;
     private $roomModel;
+    private $seatModel;
 
     public function __construct()
     {
         $this->showtimeModel = new ShowtimeModel();
         $this->movieModel = new MovieModel();
         $this->roomModel = new RoomModel();
+        $this->seatModel = new SeatModel();
     }
 
     // Danh sách
@@ -425,5 +427,71 @@ class ShowtimeController
             header('Location: ?action=showtimes&error=delete_failed');
             exit;
         }
+    }
+
+    public function seats()
+    {
+        $id = filter_input(
+            INPUT_GET,
+            'id',
+            FILTER_VALIDATE_INT
+        );
+
+        if (!$id || $id <= 0) {
+            $_SESSION['error'] = 'ID suất chiếu không hợp lệ.';
+            header('Location: ' . BASE_URL . '?action=showtimes');
+            exit;
+        }
+
+        $showtime = $this->showtimeModel->getDetail($id);
+
+        if (!$showtime) {
+            $_SESSION['error'] = 'Không tìm thấy suất chiếu.';
+            header('Location: ' . BASE_URL . '?action=showtimes');
+            exit;
+        }
+
+        $roomId = (int)$showtime['room_id'];
+
+        $seats = $this->seatModel->getSeatsForShowtime(
+            $id,
+            $roomId
+        );
+
+        $availableCount = 0;
+        $bookedCount = 0;
+        $maintenanceCount = 0;
+
+        foreach ($seats as $seat) {
+            switch ($seat['display_status']) {
+                case 'booked':
+                    $bookedCount++;
+                    break;
+
+                case 'maintenance':
+                    $maintenanceCount++;
+                    break;
+
+                default:
+                    $availableCount++;
+                    break;
+            }
+        }
+
+        $totalSeats = count($seats);
+
+        $bookings = $this->showtimeModel->getBookingsByShowtime($id);
+        $validBookingCount = 0;
+
+        foreach ($bookings as $b) {
+            if (in_array($b['status'], ['pending', 'paid'], true)) {
+                $validBookingCount++;
+            }
+        }
+
+        $title = 'Sơ đồ ghế theo suất chiếu';
+        $view = 'admin/showtime/seats';
+
+        require PATH_VIEW . 'admin/layout/layout.php';
     }
 }

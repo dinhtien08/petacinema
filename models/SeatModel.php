@@ -711,4 +711,64 @@ class SeatModel extends BaseModel
 
         return $stmt->rowCount();
     }
+
+    public function getSeatsForShowtime(
+        $showtimeId,
+        $roomId,
+        $pdo = null
+    ) {
+        $db = $pdo ?? $this->pdo;
+
+        $sql = "SELECT
+                    s.id,
+                    s.room_id,
+                    s.seat_type_id,
+                    s.seat_number,
+                    s.row_char,
+                    s.col_num,
+                    s.couple_group,
+                    s.status AS physical_status,
+                    st.name AS seat_type_name,
+                    st.name AS seat_type,
+
+                    CASE
+                        WHEN s.status = 'maintenance'
+                        THEN 'maintenance'
+
+                        WHEN booked.seat_id IS NOT NULL
+                        THEN 'booked'
+
+                        ELSE 'available'
+                    END AS display_status
+
+                FROM seats AS s
+
+                INNER JOIN seat_types AS st
+                    ON s.seat_type_id = st.id
+
+                LEFT JOIN (
+                    SELECT DISTINCT t.seat_id
+                    FROM tickets AS t
+
+                    INNER JOIN bookings AS b
+                        ON t.booking_id = b.id
+
+                    WHERE b.showtime_id = :showtime_id
+                      AND b.status IN ('pending', 'paid')
+                ) AS booked
+                    ON booked.seat_id = s.id
+
+                WHERE s.room_id = :room_id
+
+                ORDER BY
+                    s.row_char ASC,
+                    s.col_num ASC";
+
+        $stmt = $db->prepare($sql);
+        $stmt->bindValue(':showtime_id', (int) $showtimeId, PDO::PARAM_INT);
+        $stmt->bindValue(':room_id', (int) $roomId, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }

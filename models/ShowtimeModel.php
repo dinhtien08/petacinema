@@ -223,11 +223,21 @@ class ShowtimeModel extends BaseModel
     {
         $sql = "SELECT
                     s.id,
+                    s.movie_id,
+                    s.room_id,
                     m.title AS movie_title,
                     r.name AS room_name,
+                    r.total_seats,
                     s.start_time,
                     s.end_time,
-                    s.base_price
+                    s.base_price,
+                    (
+                        SELECT COUNT(DISTINCT t.seat_id)
+                        FROM tickets t
+                        JOIN bookings b ON t.booking_id = b.id
+                        WHERE b.showtime_id = s.id
+                          AND b.status IN ('pending', 'paid')
+                    ) AS booked_seats
                 FROM showtimes s
                 INNER JOIN movies m
                     ON s.movie_id = m.id
@@ -288,4 +298,46 @@ class ShowtimeModel extends BaseModel
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
-}
+
+    /**
+     * Lấy danh sách booking theo suất chiếu kèm số ghế đã đặt
+     */
+    public function getBookingsByShowtime($showtimeId)
+    {
+        $sql = "SELECT
+                    b.id,
+                    b.booking_code,
+                    b.user_id,
+                    b.total_amount,
+                    b.status,
+                    b.created_at,
+                    u.fullname AS customer_name,
+                    u.email AS customer_email,
+                    GROUP_CONCAT(se.seat_number ORDER BY se.seat_number SEPARATOR ', ') AS seat_labels,
+                    COUNT(t.id) AS ticket_count
+                FROM bookings b
+                LEFT JOIN users u
+                    ON b.user_id = u.id
+                LEFT JOIN tickets t
+                    ON b.id = t.booking_id
+                LEFT JOIN seats se
+                    ON t.seat_id = se.id
+                WHERE b.showtime_id = :showtime_id
+                GROUP BY
+                    b.id,
+                    b.booking_code,
+                    b.user_id,
+                    b.total_amount,
+                    b.status,
+                    b.created_at,
+                    u.fullname,
+                    u.email
+                ORDER BY b.id DESC";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->bindValue(':showtime_id', (int) $showtimeId, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+}
