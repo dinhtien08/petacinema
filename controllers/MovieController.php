@@ -3,9 +3,14 @@ class MovieController
 {
     public function list()
     {
+        $keyword   = trim($_GET['keyword'] ?? '');
+        $status    = trim($_GET['status'] ?? '');
+        $genre     = trim($_GET['genre'] ?? '');
+        $ageRating = trim($_GET['age_rating'] ?? '');
+
         $movieModel = new MovieModel();
-        $movies = $movieModel->getAll();
-        // debug($movies);
+        $movies = $movieModel->searchAndFilter($keyword, $status, $genre, $ageRating);
+
         $view ='admin/movie/list';
         require_once PATH_VIEW . 'admin/layout/layout.php';
     }
