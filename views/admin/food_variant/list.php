@@ -2,7 +2,7 @@
 
     <div class="d-flex align-items-center justify-content-between mb-3">
 
-        <h4 class="mb-0">Biến thể món: <?= h($food['name']) ?></h4>
+        <h4 class="mb-0">size món: <?= h($food['name']) ?></h4>
 
         <div class="d-flex gap-2">
             <a href="?action=food_list" class="btn btn-outline-secondary">
@@ -21,7 +21,7 @@
         <table class="table table-bordered align-middle">
             <thead class="table-light">
                 <tr>
-                    <th>ID</th>
+                    <th>STT</th>
                     <th>Kích cỡ</th>
                     <th>Giá</th>
                     <th>Tồn kho</th>
@@ -31,12 +31,13 @@
             <tbody>
                 <?php if (empty($variants)): ?>
                     <tr>
-                        <td colspan="5" class="text-center text-muted">Món này chưa có biến thể nào.</td>
+                        <td colspan="5" class="text-center text-muted">Món này chưa có size nào.</td>
                     </tr>
                 <?php else: ?>
+                    <?php $stt = 1; ?>
                     <?php foreach ($variants as $variant): ?>
                         <tr>
-                            <td><?= h($variant['id']) ?></td>
+                            <td><?= $stt++ ?></td>
                             <td><?= h($variant['size']) ?></td>
                             <td><?= number_format((float) $variant['price']) ?>đ</td>
                             <td><?= (int) $variant['stock'] ?></td>

@@ -10,7 +10,7 @@
 
     </div>
 
-    <p class="text-muted">Bước 1: Chọn món ăn &rarr; Bước 2: Chọn biến thể &rarr; Bước 3: Nhập thông tin đơn.</p>
+    <p class="text-muted">Bước 1: Chọn món ăn &rarr; Bước 2: Chọn size &rarr; Bước 3: Nhập thông tin đơn.</p>
 
     <?php if ($stage === 1): ?>
 
@@ -40,8 +40,8 @@
 
         <?php if (empty($variants)): ?>
 
-            <div class="alert alert-warning">Món này chưa có biến thể nào. Vui lòng chọn món khác hoặc thêm biến thể trước.</div>
-            <a href="?action=food_variant_add&food_id=<?= (int) $food['id'] ?>" class="btn btn-outline-primary">Thêm biến thể cho món này</a>
+            <div class="alert alert-warning">Món này chưa có size nào. Vui lòng chọn món khác hoặc thêm size trước.</div>
+            <a href="?action=food_variant_add&food_id=<?= (int) $food['id'] ?>" class="btn btn-outline-primary">Thêm size cho món này</a>
 
         <?php else: ?>
 
@@ -50,9 +50,9 @@
                 <input type="hidden" name="food_id" value="<?= (int) $food['id'] ?>">
 
                 <div class="col-12">
-                    <label class="form-label">Chọn biến thể <span class="text-danger">*</span></label>
+                    <label class="form-label">Chọn size <span class="text-danger">*</span></label>
                     <select name="variant_id" class="form-select">
-                        <option value="">-- Chọn biến thể --</option>
+                        <option value="">-- Chọn size --</option>
                         <?php foreach ($variants as $v): ?>
                             <option value="<?= (int) $v['id'] ?>"><?= h($v['size']) ?> - <?= number_format((float) $v['price']) ?>đ (Tồn: <?= (int) $v['stock'] ?>)</option>
                         <?php endforeach; ?>
@@ -70,8 +70,8 @@
 
         <p>
             <strong>Món ăn:</strong> <?= h($food['name']) ?> &mdash;
-            <strong>Biến thể:</strong> <?= h($variant['size']) ?> (<?= number_format((float) $variant['price']) ?>đ)
-            &nbsp;<a href="?action=food_order_add&food_id=<?= (int) $food['id'] ?>">(Đổi biến thể)</a>
+            <strong>Size:</strong> <?= h($variant['size']) ?> (<?= number_format((float) $variant['price']) ?>đ)
+            &nbsp;<a href="?action=food_order_add&food_id=<?= (int) $food['id'] ?>">(Đổi size)</a>
         </p>
 
         <form action="?action=food_order_addPost" method="post" class="row g-3" style="max-width: 500px;">

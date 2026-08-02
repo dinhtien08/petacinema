@@ -63,7 +63,7 @@ $keyword = $_GET['keyword'] ?? '';
 
                 <thead class="table-light">
                     <tr>
-                        <th class="ps-4">#</th>
+                        <th class="ps-4">STT</th>
                         <th>Mã booking</th>
                         <th>Khách hàng</th>
                         <th>Phim</th>
