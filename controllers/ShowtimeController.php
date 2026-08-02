@@ -18,7 +18,15 @@ class ShowtimeController
     {
         $title = "Danh sách suất chiếu";
 
-        $showtimes = $this->showtimeModel->getAllShowtimes();
+        $keyword = trim($_GET['keyword'] ?? '');
+        $movieId = trim($_GET['movie_id'] ?? '');
+        $roomId  = trim($_GET['room_id'] ?? '');
+        $status  = trim($_GET['status'] ?? '');
+        $date    = trim($_GET['date'] ?? '');
+
+        $showtimes = $this->showtimeModel->searchAndFilter($keyword, $movieId, $roomId, $status, $date);
+        $movies    = $this->movieModel->getMovieList();
+        $rooms     = $this->roomModel->getRoomList();
 
         $view = "admin/showtime/list";
 

@@ -106,4 +106,40 @@ class MovieModel extends BaseModel
 
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
+
+    public function searchAndFilter($keyword = null, $status = null, $genre = null, $ageRating = null)
+    {
+        $sql = "SELECT * FROM {$this->table} WHERE 1=1";
+        $params = [];
+
+        if (!empty($keyword)) {
+            $sql .= " AND (title LIKE :keyword OR genres LIKE :keyword OR director LIKE :keyword OR actors LIKE :keyword)";
+            $params[':keyword'] = '%' . $keyword . '%';
+        }
+
+        if (!empty($status)) {
+            $sql .= " AND status = :status";
+            $params[':status'] = $status;
+        }
+
+        if (!empty($genre)) {
+            $sql .= " AND genres LIKE :genre";
+            $params[':genre'] = '%' . $genre . '%';
+        }
+
+        if (!empty($ageRating)) {
+            $sql .= " AND age_rating = :age_rating";
+            $params[':age_rating'] = $ageRating;
+        }
+
+        $sql .= " ORDER BY id DESC";
+
+        $stmt = $this->pdo->prepare($sql);
+        foreach ($params as $key => $val) {
+            $stmt->bindValue($key, $val);
+        }
+
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }

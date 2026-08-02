@@ -10,6 +10,75 @@
     </a>
 </div>
 
+<?php
+$keyword = $_GET['keyword'] ?? '';
+$status = $_GET['status'] ?? '';
+$genre = $_GET['genre'] ?? '';
+$ageRating = $_GET['age_rating'] ?? '';
+$currentAction = $_GET['action'] ?? 'movie_list';
+$hasFilter = !empty($keyword) || !empty($status) || !empty($genre) || !empty($ageRating);
+?>
+
+<!-- Filter Panel -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" action="" class="row g-3 align-items-end">
+            <input type="hidden" name="action" value="<?= htmlspecialchars($currentAction) ?>">
+            <?php if (!empty($keyword)) : ?>
+                <input type="hidden" name="keyword" value="<?= htmlspecialchars($keyword) ?>">
+            <?php endif; ?>
+
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Trạng thái phim</label>
+                <select name="status" class="form-select">
+                    <option value="">-- Tất cả trạng thái --</option>
+                    <option value="now_showing" <?= $status === 'now_showing' ? 'selected' : '' ?>>Now Showing (Đang chiếu)</option>
+                    <option value="coming_soon" <?= $status === 'coming_soon' ? 'selected' : '' ?>>Coming Soon (Sắp chiếu)</option>
+                    <option value="ended" <?= $status === 'ended' ? 'selected' : '' ?>>Ended (Ngừng chiếu)</option>
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Thể loại</label>
+                <input type="text" name="genre" class="form-control" placeholder="Nhập thể loại..." value="<?= htmlspecialchars($genre) ?>">
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Độ tuổi</label>
+                <select name="age_rating" class="form-select">
+                    <option value="">-- Tất cả độ tuổi --</option>
+                    <?php
+                    $ratings = ['P', 'K', 'T13', 'T16', 'T18', 'C'];
+                    foreach ($ratings as $r) {
+                        $selected = $ageRating === $r ? 'selected' : '';
+                        echo "<option value=\"$r\" $selected>$r</option>";
+                    }
+                    ?>
+                </select>
+            </div>
+
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-grow-1">
+                    <i class="bi bi-funnel me-1"></i> Lọc
+                </button>
+                <a href="<?= BASE_URL ?>?action=<?= htmlspecialchars($currentAction) ?>" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> Làm mới
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<?php if ($hasFilter) : ?>
+    <div class="alert alert-info py-2 mb-3">
+        <i class="bi bi-info-circle me-1"></i>
+        Showing <?= count($movies) ?> result(s)
+        <?php if (!empty($keyword)) : ?>
+            for "<strong><?= htmlspecialchars($keyword) ?></strong>"
+        <?php endif; ?>
+    </div>
+<?php endif; ?>
+
 <div class="card">
     <div class="card-body p-0">
 
@@ -132,8 +201,11 @@
                     <?php else : ?>
 
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-5">
-                                Chưa có phim nào.
+                            <td colspan="9" class="text-center py-4">
+                                <div class="alert alert-warning mb-0 d-inline-block px-4" role="alert">
+                                    <i class="bi bi-exclamation-triangle me-2"></i>
+                                    No matching data found.
+                                </div>
                             </td>
                         </tr>
 

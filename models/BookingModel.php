@@ -7,6 +7,11 @@ class BookingModel extends BaseModel
     // JOIN users + showtimes + movies để hiển thị đầy đủ thông tin booking
     public function getAll()
     {
+        return $this->searchAndFilter();
+    }
+
+    public function searchAndFilter($keyword = null)
+    {
         $sql = "SELECT b.*,
                        u.fullname AS customer_name,
                        u.email AS customer_email,
@@ -17,9 +22,19 @@ class BookingModel extends BaseModel
                 JOIN users u ON u.id = b.user_id
                 JOIN showtimes s ON s.id = b.showtime_id
                 JOIN movies m ON m.id = s.movie_id
-                ORDER BY b.id ASC";
+                WHERE 1=1";
+
+        if (!empty($keyword)) {
+            $sql .= " AND (b.booking_code LIKE :keyword OR u.fullname LIKE :keyword OR u.email LIKE :keyword)";
+        }
+
+        $sql .= " ORDER BY b.id DESC";
 
         $stmt = $this->pdo->prepare($sql);
+        if (!empty($keyword)) {
+            $stmt->bindValue(':keyword', '%' . $keyword . '%');
+        }
+
         $stmt->execute();
         return $stmt->fetchAll();
     }

@@ -208,4 +208,64 @@ class ShowtimeModel extends BaseModel
 
         return (int) $stmt->fetchColumn() > 0;
     }
+
+    public function searchAndFilter($keyword = null, $movieId = null, $roomId = null, $status = null, $date = null)
+    {
+        $sql = "SELECT
+                    s.id,
+                    m.title AS movie_title,
+                    r.name AS room_name,
+                    s.start_time,
+                    s.end_time,
+                    s.base_price
+                FROM showtimes s
+                INNER JOIN movies m
+                    ON s.movie_id = m.id
+                INNER JOIN rooms r
+                    ON s.room_id = r.id
+                WHERE 1=1";
+
+        $params = [];
+
+        if (!empty($keyword)) {
+            $sql .= " AND m.title LIKE :keyword";
+            $params[':keyword'] = '%' . $keyword . '%';
+        }
+
+        if (!empty($movieId)) {
+            $sql .= " AND s.movie_id = :movie_id";
+            $params[':movie_id'] = (int)$movieId;
+        }
+
+        if (!empty($roomId)) {
+            $sql .= " AND s.room_id = :room_id";
+            $params[':room_id'] = (int)$roomId;
+        }
+
+        if (!empty($status)) {
+            if ($status === 'upcoming') {
+                $sql .= " AND s.start_time > NOW()";
+            } elseif ($status === 'showing') {
+                $sql .= " AND s.start_time <= NOW() AND s.end_time >= NOW()";
+            } elseif ($status === 'ended') {
+                $sql .= " AND s.end_time < NOW()";
+            }
+        }
+
+        if (!empty($date)) {
+            $sql .= " AND DATE(s.start_time) = :date";
+            $params[':date'] = $date;
+        }
+
+        $sql .= " ORDER BY s.start_time DESC";
+
+        $stmt = $this->pdo->prepare($sql);
+        foreach ($params as $key => $val) {
+            $stmt->bindValue($key, $val);
+        }
+
+        $stmt->execute();
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }
