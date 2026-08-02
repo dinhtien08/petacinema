@@ -154,7 +154,7 @@ $hasFilter = !empty($keyword) || !empty($movieId) || !empty($roomId) || !empty($
 
                 <thead class="table-light">
                     <tr class="text-center">
-                        <th width="60">#</th>
+                        <th width="70">STT</th>
                         <th>Phim</th>
                         <th>Phòng</th>
                         <th>Bắt đầu</th>
