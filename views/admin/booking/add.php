@@ -1,7 +1,12 @@
+<div class="alert alert-info py-2 mb-3">
+    <i class="bi bi-info-circle me-1"></i>
+    Chức năng này chỉ dùng để kiểm thử dữ liệu. Booking thực tế được tạo từ quy trình đặt vé online.
+</div>
+
 <div class="d-flex align-items-center justify-content-between mb-4">
     <div>
-        <h4 class="fw-bold mb-1">Thêm booking</h4>
-        <p class="text-muted mb-0">Tạo booking mới cho khách hàng</p>
+        <h4 class="fw-bold mb-1">Thêm dữ liệu test (Booking)</h4>
+        <p class="text-muted mb-0">Thêm đơn đặt vé phục vụ mục đích kiểm thử hệ thống</p>
     </div>
 
     <a href="<?= BASE_URL ?>?action=booking_list" class="btn btn-secondary">

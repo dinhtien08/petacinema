@@ -105,6 +105,12 @@
 
     <div class="card-footer bg-white d-flex justify-content-end gap-2">
 
+        <a href="?action=showtimeSeats&id=<?= (int)$showtime['id'] ?>"
+           class="btn btn-outline-secondary">
+            <i class="bi bi-grid-3x3-gap me-1"></i>
+            Xem sơ đồ ghế
+        </a>
+
         <a href="?action=showtime_edit&id=<?= $showtime['id'] ?>"
            class="btn btn-warning">
             <i class="bi bi-pencil-square"></i>

@@ -78,6 +78,8 @@ match ($action) {
     // Booking
     'bookings'             => (new BookingController)->list(),
     'booking_list'         => (new BookingController)->list(),
+    'booking_show'         => (new BookingController)->show(),
+    'booking_detail'       => (new BookingController)->show(),
     'booking_add'          => (new BookingController)->add(),
     'booking_addPost'      => (new BookingController)->addPost(),
     'booking_edit'         => (new BookingController)->edit(),
@@ -96,6 +98,7 @@ match ($action) {
     'showtime_edit' => (new ShowtimeController)->edit(),
     'showtime_update' => (new ShowtimeController)->update(),
     'showtime_delete' => (new ShowtimeController)->delete(),
-    
+    'showtimeSeats' => (new ShowtimeController)->seats(),
+
 
 };

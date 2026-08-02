@@ -2,7 +2,6 @@
 
 class BookingController
 {
-    // GET ?action=booking_list
     public function list()
     {
         $keyword = trim($_GET['keyword'] ?? '');
@@ -13,134 +12,164 @@ class BookingController
         require_once PATH_VIEW . 'admin/layout/layout.php';
     }
 
-    // GET ?action=booking_add
     public function add()
     {
         $userModel = new UserModel();
         $bookingModel = new BookingModel();
+
         $users = $userModel->getAll();
         $showtimes = $bookingModel->getShowtimeOptions();
+        $foodVariants = $bookingModel->getFoodVariantOptions();
         $errors = [];
         $old = [
             'status' => 'pending',
+            'seat_numbers' => '',
+            'food_quantities' => [],
         ];
+
         $view = 'admin/booking/add';
         require_once PATH_VIEW . 'admin/layout/layout.php';
     }
 
     public function addPost()
     {
-        $old = [
-            'user_id'      => trim($_POST['user_id'] ?? ''),
-            'showtime_id'  => trim($_POST['showtime_id'] ?? ''),
-            'total_amount' => trim($_POST['total_amount'] ?? ''),
-            'status'       => $_POST['status'] ?? 'pending',
-        ];
-        $errors = $this->validate($old);
-        if (!empty($errors)) {
-            $userModel = new UserModel();
-            $bookingModel = new BookingModel();
-            $users = $userModel->getAll();
-            $showtimes = $bookingModel->getShowtimeOptions();
-            $view = 'admin/booking/add';
-            require_once PATH_VIEW . 'admin/layout/layout.php';
-            return;
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: ?action=booking_add');
+            exit;
         }
-        $bookingModel = new BookingModel();
-        $bookingModel->addBooking([
-            'booking_code' => $bookingModel->generateBookingCode(),
-            'user_id'      => $old['user_id'],
-            'showtime_id'  => $old['showtime_id'],
-            'total_amount' => $old['total_amount'],
-            'status'       => $old['status'],
-        ]);
 
-        set_flash('success', 'Thêm booking thành công.');
-        header('Location: ?action=booking_list');
-        exit;
+        $old = [
+            'user_id' => trim($_POST['user_id'] ?? ''),
+            'showtime_id' => trim($_POST['showtime_id'] ?? ''),
+            'seat_numbers' => strtoupper(trim($_POST['seat_numbers'] ?? '')),
+            'food_quantities' => $this->normalizeFoodQuantities($_POST['food_quantities'] ?? []),
+            'status' => $_POST['status'] ?? 'pending',
+        ];
+
+        $errors = $this->validate($old);
+
+        if (empty($errors)) {
+            $bookingModel = new BookingModel();
+
+            try {
+                $bookingId = $bookingModel->createBookingWithTicketsAndFoods([
+                    'booking_code' => $bookingModel->generateBookingCode(),
+                    'user_id' => (int) $old['user_id'],
+                    'showtime_id' => (int) $old['showtime_id'],
+                    'seat_numbers' => $this->parseSeatNumbers($old['seat_numbers']),
+                    'food_quantities' => $old['food_quantities'],
+                    'status' => $old['status'],
+                ]);
+
+                set_flash('success', 'Thêm booking, vé và đồ ăn test thành công.');
+                header('Location: ?action=booking_show&id=' . $bookingId);
+                exit;
+            } catch (InvalidArgumentException $e) {
+                $errors['general'] = $e->getMessage();
+            } catch (Throwable $e) {
+                $errors['general'] = 'Không thể thêm booking: ' . $e->getMessage();
+            }
+        }
+
+        $userModel = new UserModel();
+        $bookingModel = new BookingModel();
+        $users = $userModel->getAll();
+        $showtimes = $bookingModel->getShowtimeOptions();
+        $foodVariants = $bookingModel->getFoodVariantOptions();
+        $view = 'admin/booking/add';
+        require_once PATH_VIEW . 'admin/layout/layout.php';
     }
 
-    // GET ?action=booking_edit&id=
-    public function edit()
+    public function show()
     {
         $id = (int) ($_GET['id'] ?? 0);
         $bookingModel = new BookingModel();
         $booking = $bookingModel->getById($id);
+
         if (!$booking) {
             set_flash('error', 'Không tìm thấy booking.');
             header('Location: ?action=booking_list');
             exit;
         }
-        $userModel = new UserModel();
-        $users = $userModel->getAll();
-        $showtimes = $bookingModel->getShowtimeOptions();
-        $errors = [];
-        $old = $booking;
-        $view = 'admin/booking/edit';
+
+        $tickets = $bookingModel->getBookingTickets($id);
+        $foodOrders = $bookingModel->getBookingFoodOrders($id);
+        $ticketTotal = array_sum(array_map(fn($ticket) => (float) $ticket['ticket_price'], $tickets));
+        $foodTotal = array_sum(array_map(
+            fn($food) => (float) $food['price_at_booking'] * (int) $food['quantity'],
+            $foodOrders
+        ));
+
+        $flash = get_flash();
+        $view = 'admin/booking/show';
         require_once PATH_VIEW . 'admin/layout/layout.php';
     }
 
-    // POST ?action=booking_editPost&id=
+    public function edit()
+    {
+        set_flash('error', 'Chức năng chỉnh sửa booking đã bị tắt (Read-only).');
+        header('Location: ?action=booking_list');
+        exit;
+    }
+
     public function editPost()
     {
-        $id = (int) ($_GET['id'] ?? $_POST['id'] ?? 0);
-        $bookingModel = new BookingModel();
-        $booking = $bookingModel->getById($id);
-        if (!$booking) {
-            set_flash('error', 'Không tìm thấy booking.');
-            header('Location: ?action=booking_list');
-            exit;
-        }
-        $old = [
-            'id'           => $id,
-            'booking_code' => $booking['booking_code'],
-            'user_id'      => trim($_POST['user_id'] ?? ''),
-            'showtime_id'  => trim($_POST['showtime_id'] ?? ''),
-            'total_amount' => trim($_POST['total_amount'] ?? ''),
-            'status'       => $_POST['status'] ?? 'pending',
-        ];
-        $errors = $this->validate($old);
-        if (!empty($errors)) {
-            $userModel = new UserModel();
-            $users = $userModel->getAll();
-            $showtimes = $bookingModel->getShowtimeOptions();
-            $view = 'admin/booking/edit';
-            require_once PATH_VIEW . 'admin/layout/layout.php';
-            return;
-        }
-        $bookingModel->editBooking($id, $old);
-        set_flash('success', 'Cập nhật booking thành công.');
+        set_flash('error', 'Chức năng chỉnh sửa booking đã bị tắt (Read-only).');
         header('Location: ?action=booking_list');
         exit;
     }
 
-    // POST ?action=booking_delete&id=
     public function delete()
     {
-        $id = (int) ($_GET['id'] ?? $_POST['id'] ?? 0);
-        $bookingModel = new BookingModel();
-        $bookingModel->deleteBooking($id);
-
-        set_flash('success', 'Xóa booking thành công.');
+        set_flash('error', 'Chức năng xóa booking đã bị tắt (Read-only).');
         header('Location: ?action=booking_list');
         exit;
     }
 
-    private function validate($data)
+    private function validate(array $data): array
     {
         $errors = [];
-        if ($data['user_id'] === '' || !ctype_digit((string) $data['user_id']) || (int) $data['user_id'] <= 0) {
+
+        if ($data['user_id'] === '' || !ctype_digit($data['user_id']) || (int) $data['user_id'] <= 0) {
             $errors['user_id'] = 'Vui lòng chọn khách hàng.';
         }
-        if ($data['showtime_id'] === '' || !ctype_digit((string) $data['showtime_id']) || (int) $data['showtime_id'] <= 0) {
+
+        if ($data['showtime_id'] === '' || !ctype_digit($data['showtime_id']) || (int) $data['showtime_id'] <= 0) {
             $errors['showtime_id'] = 'Vui lòng chọn suất chiếu.';
         }
-        if ($data['total_amount'] === '' || !is_numeric($data['total_amount']) || (float) $data['total_amount'] < 0) {
-            $errors['total_amount'] = 'Tổng tiền phải là số và không được âm.';
+
+        if (empty($this->parseSeatNumbers($data['seat_numbers']))) {
+            $errors['seat_numbers'] = 'Vui lòng nhập ít nhất một ghế, ví dụ A1,A2.';
         }
+
         if (!in_array($data['status'], ['pending', 'paid', 'cancelled'], true)) {
             $errors['status'] = 'Trạng thái không hợp lệ.';
         }
+
         return $errors;
+    }
+
+    private function parseSeatNumbers(string $value): array
+    {
+        $seatNumbers = preg_split('/[\s,;]+/', strtoupper(trim($value)));
+        $seatNumbers = array_filter(array_map('trim', $seatNumbers));
+        return array_values(array_unique($seatNumbers));
+    }
+
+    private function normalizeFoodQuantities($quantities): array
+    {
+        if (!is_array($quantities)) {
+            return [];
+        }
+
+        $normalized = [];
+        foreach ($quantities as $variantId => $quantity) {
+            $variantId = (int) $variantId;
+            $quantity = (int) $quantity;
+            if ($variantId > 0 && $quantity > 0) {
+                $normalized[$variantId] = min($quantity, 99);
+            }
+        }
+        return $normalized;
     }
 }

@@ -160,7 +160,8 @@ $hasFilter = !empty($keyword) || !empty($movieId) || !empty($roomId) || !empty($
                         <th>Bắt đầu</th>
                         <th>Kết thúc</th>
                         <th>Giá cơ sở</th>
-                        <th width="180">Thao tác</th>
+                        <th>Đã đặt / Tổng ghế</th>
+                        <th width="280">Thao tác</th>
                     </tr>
                 </thead>
 
@@ -195,7 +196,20 @@ $hasFilter = !empty($keyword) || !empty($movieId) || !empty($roomId) || !empty($
                                 <?= number_format($showtime['base_price'], 0, ',', '.') ?> đ
                             </td>
 
+                            <td class="text-center fw-semibold">
+                                <span class="badge text-bg-light border px-2 py-1">
+                                    <span class="text-danger fw-bold"><?= (int)($showtime['booked_seats'] ?? 0) ?></span> / <?= (int)($showtime['total_seats'] ?? 0) ?> ghế
+                                </span>
+                            </td>
+
                             <td class="text-center">
+
+                                <a href="?action=showtimeSeats&id=<?= (int)$showtime['id'] ?>"
+                                   class="btn btn-outline-secondary btn-sm"
+                                   title="Xem sơ đồ ghế theo suất chiếu">
+                                    <i class="bi bi-grid-3x3-gap me-1"></i>
+                                    Sơ đồ ghế
+                                </a>
 
                                 <a href="?action=showtime_show&id=<?= $showtime['id'] ?>"
                                    class="btn btn-info btn-sm">
@@ -222,7 +236,7 @@ $hasFilter = !empty($keyword) || !empty($movieId) || !empty($roomId) || !empty($
                 <?php else: ?>
 
                     <tr>
-                        <td colspan="7" class="text-center py-4">
+                        <td colspan="8" class="text-center py-4">
                             <div class="alert alert-warning mb-0 d-inline-block px-4" role="alert">
                                 <i class="bi bi-exclamation-triangle me-2"></i>
                                 No matching data found.
