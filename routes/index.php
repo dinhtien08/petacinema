@@ -99,6 +99,8 @@ match ($action) {
     'showtime_update' => (new ShowtimeController)->update(),
     'showtime_delete' => (new ShowtimeController)->delete(),
     'showtimeSeats' => (new ShowtimeController)->seats(),
-
-
+    //login logout
+    'login' => (new AuthController)->login(),
+    'logout' => (new AuthController)->logout(),
+    'register'=>(new AuthController)->register()
 };
