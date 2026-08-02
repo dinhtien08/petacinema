@@ -78,7 +78,8 @@ $keyword = $_GET['keyword'] ?? '';
                 <tbody>
 
                     <?php if (!empty($bookings)) : ?>
-                        <?php foreach ($bookings as $booking) : ?>
+                            <?php $stt = 1; ?>
+                            <?php foreach ($bookings as $booking) : ?>
                             <?php
                             $statusClass = match ($booking['status']) {
                                 'pending'   => 'bg-warning text-dark',
@@ -94,7 +95,7 @@ $keyword = $_GET['keyword'] ?? '';
                             };
                             ?>
                             <tr>
-                                <td class="ps-4"><?= $booking['id'] ?></td>
+                                <td class="ps-4"><?= $stt++ ?></td>
                                 <td class="fw-semibold text-primary"><?= htmlspecialchars($booking['booking_code']) ?></td>
                                 <td>
                                     <?= htmlspecialchars($booking['customer_name']) ?>
@@ -120,7 +121,7 @@ $keyword = $_GET['keyword'] ?? '';
                                         href="<?= BASE_URL ?>?action=booking_show&id=<?= $booking['id'] ?>"
                                         class="btn btn-sm btn-outline-info"
                                         title="Xem chi tiết">
-                                        <i class="bi bi-eye me-1"></i> Chi tiết
+                                        <i class="bi bi-eye me-1"></i>
                                     </a>
 
                                 </td>
