@@ -14,7 +14,7 @@
             <table class="table align-middle mb-0">
                 <thead>
                 <tr>
-                    <th>#</th>
+                    <th>STT</th>
                     <th>Tên loại phòng</th>
                     <th>Phụ thu</th>
                     <th>Mô tả</th>
@@ -23,9 +23,13 @@
                 </tr>
                 </thead>
                 <tbody>
-                <?php foreach ($listRoomType as $roomType): ?>
+                <?php 
+                $stt=0;
+                foreach ($listRoomType as $roomType ):
+                $stt++;
+                ?>
                     <tr>
-                        <td><?= $roomType['id'] ?></td>
+                        <td><?= $stt ?></td>
                         <td class="fw-semibold"><?= htmlspecialchars($roomType['name']) ?></td>
                         <td><?= number_format((float)$roomType['price_modifier'], 0, ',', '.') ?> đ</td>
                         <td><?= htmlspecialchars($roomType['description'] ?? '') ?></td>

@@ -18,7 +18,7 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th width="70">ID</th>
+                        <th width="70">STT</th>
                         <th>Tên phòng</th>
                         <th>Loại phòng</th>
                         <th>Layout</th>
@@ -31,7 +31,11 @@
 
                 <?php if (!empty($listRoom)): ?>
 
-                    <?php foreach ($listRoom as $room): ?>
+                    <?php
+                        $Stt=0;
+                        foreach ($listRoom as $room):
+                        $Stt++;
+                        ?>
 
                         <?php
                         $totalSeats       = (int)$room['total_seats'];
@@ -51,7 +55,7 @@
                         <tr>
 
                             <td>
-                                #<?= $room['id'] ?>
+                                <?= $Stt ?>
                             </td>
 
                             <td class="fw-semibold">

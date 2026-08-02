@@ -14,7 +14,7 @@
             <table class="table align-middle mb-0">
                 <thead>
                 <tr>
-                    <th>#</th>
+                    <th>STT</th>
                     <th>Tên loại ghế</th>
                     <th>Phụ thu</th>
                     <th>Mô tả</th>
@@ -23,9 +23,13 @@
                 </tr>
                 </thead>
                 <tbody>
-                <?php foreach ($listSeatType as $seatType): ?>
+                <?php 
+                $Stt=0;
+                foreach ($listSeatType as $seatType): 
+                $Stt++;
+                ?>
                     <tr>
-                        <td><?= $seatType['id'] ?></td>
+                        <td><?= $Stt ?></td>
                         <td class="fw-semibold"><?= htmlspecialchars($seatType['name']) ?></td>
                         <td><?= number_format((float)$seatType['surcharge'], 0, ',', '.') ?> đ</td>
                         <td><?= htmlspecialchars($seatType['description'] ?? '') ?></td>
