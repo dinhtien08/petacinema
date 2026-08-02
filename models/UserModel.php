@@ -72,4 +72,20 @@ class UserModel extends BaseModel
         $stmt->execute();
         return $stmt->fetchColumn();
     }
+
+    public function searchAndFilter($keyword = null)
+    {
+        $sql = "SELECT * FROM users WHERE 1=1";
+        if (!empty($keyword)) {
+            $sql .= " AND (fullname LIKE :keyword OR email LIKE :keyword)";
+        }
+        $sql .= " ORDER BY id DESC";
+
+        $stmt = $this->pdo->prepare($sql);
+        if (!empty($keyword)) {
+            $stmt->bindValue(':keyword', '%' . $keyword . '%');
+        }
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
 }

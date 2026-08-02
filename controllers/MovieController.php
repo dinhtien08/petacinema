@@ -3,6 +3,12 @@ class MovieController
 {
     public function list()
     {
+        $keyword   = trim($_GET['keyword'] ?? '');
+        $status    = trim($_GET['status'] ?? '');
+        $genre     = trim($_GET['genre'] ?? '');
+        $ageRating = trim($_GET['age_rating'] ?? '');
+        $sort      = trim($_GET['sort'] ?? 'status');
+
         $movieModel = new MovieModel();
         $movies = $movieModel->getAll();
         // debug($movies);

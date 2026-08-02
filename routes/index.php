@@ -4,7 +4,34 @@ $action = $_GET['action'] ?? '/';
 
 match ($action) {
     '/'         => (new HomeController)->index(),
+    // Rooms
+    'rooms'               => (new RoomController)->list(),
+    'roomAdd'             => (new RoomController)->add(),
+    'roomAddProcess'      => (new RoomController)->addProcess(),
+    'roomEdit'            => (new RoomController)->edit(),
+    'roomEditProcess'     => (new RoomController)->editProcess(),
+    'roomDelete'          => (new RoomController)->delete(),
+    'roomSeats'           => (new RoomController)->seats(),
+    'roomGenerateSeats'   => (new RoomController)->generateSeats(),
+    'roomToggleSeat' => (new RoomController())->toggleSeat(),
+
+    // Room Types
+    'room-types'          => (new RoomTypeController)->list(),
+    'roomTypeAdd'         => (new RoomTypeController)->add(),
+    'roomTypeAddProcess'  => (new RoomTypeController)->addProcess(),
+    'roomTypeEdit'        => (new RoomTypeController)->edit(),
+    'roomTypeEditProcess' => (new RoomTypeController)->editProcess(),
+    'roomTypeDelete'      => (new RoomTypeController)->delete(),
+
+    // Seat Types
+    'seat-types'          => (new SeatTypeController)->list(),
+    'seatTypeAdd'         => (new SeatTypeController)->add(),
+    'seatTypeAddProcess'  => (new SeatTypeController)->addProcess(),
+    'seatTypeEdit'        => (new SeatTypeController)->edit(),
+    'seatTypeEditProcess' => (new SeatTypeController)->editProcess(),
+    'seatTypeDelete'      => (new SeatTypeController)->delete(),
     // Movie
+    'movies'             => (new MovieController)->list(),
     'movie_list'         => (new MovieController)->list(),
     'movie_delete' => (new MovieController)->delete(),
     'movie_create' => (new MovieController)->create(),
@@ -16,6 +43,7 @@ match ($action) {
     //Dashboard
     'dashboard' => (new DashboardController)->dashboard(),
     // User
+    'users'          => (new UserController)->users_list(),
     'users_list'     => (new UserController)->users_list(),
     'users_add'      => (new UserController)->users_add(),
     'users_addUser'  => (new UserController)->users_addUser(),
@@ -46,4 +74,31 @@ match ($action) {
     'food_order_edit'         => (new FoodOrderController)->edit(),
     'food_order_editPost'     => (new FoodOrderController)->editPost(),
     'food_order_delete'       => (new FoodOrderController)->delete(),
+
+    // Booking
+    'bookings'             => (new BookingController)->list(),
+    'booking_list'         => (new BookingController)->list(),
+    'booking_show'         => (new BookingController)->show(),
+    'booking_detail'       => (new BookingController)->show(),
+    'booking_add'          => (new BookingController)->add(),
+    'booking_addPost'      => (new BookingController)->addPost(),
+    'booking_edit'         => (new BookingController)->edit(),
+    'booking_editPost'     => (new BookingController)->editPost(),
+    'booking_delete'       => (new BookingController)->delete(),
+
+    // Payment
+    'payment_list'         => (new PaymentController)->payment_list(),
+    'payment_detail'       => (new PaymentController)->payment_detail(),
+
+    // showtime
+    'showtimes' => (new ShowtimeController)->list(),
+    'showtime_show' => (new ShowtimeController)->show(),
+    'showtime_create' => (new ShowtimeController)->create(),
+    'showtime_store' => (new ShowtimeController)->store(),
+    'showtime_edit' => (new ShowtimeController)->edit(),
+    'showtime_update' => (new ShowtimeController)->update(),
+    'showtime_delete' => (new ShowtimeController)->delete(),
+    'showtimeSeats' => (new ShowtimeController)->seats(),
+
+
 };

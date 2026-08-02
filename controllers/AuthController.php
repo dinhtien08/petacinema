@@ -45,7 +45,8 @@ class AuthController
 
         if ($user['role'] == 'admin') {
             header("Location:" . BASE_URL);
-        } else {
+        }
+         else {
             header("Location:" . BASE_URL);
         }
     }

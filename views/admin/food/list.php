@@ -18,7 +18,7 @@
         <table class="table table-bordered align-middle">
             <thead class="table-light">
                 <tr>
-                    <th>ID</th>
+                    <th>STT</th>
                     <th>Hình ảnh</th>
                     <th>Tên món</th>
                     <th>Mô tả</th>
@@ -33,9 +33,10 @@
                         <td colspan="7" class="text-center text-muted">Chưa có món ăn nào.</td>
                     </tr>
                 <?php else: ?>
-                    <?php foreach ($foods as $food): ?>
+                        <?php $stt = 1; ?>
+                        <?php foreach ($foods as $food): ?>
                         <tr>
-                            <td><?= h($food['id']) ?></td>
+                            <td><?= $stt++ ?></td>
                             <td>
                                 <?php if (!empty($food['image'])): ?>
                                     <img src="<?= h(BASE_ASSETS_UPLOADS . $food['image']) ?>" alt="" width="60" height="60" style="object-fit: cover; border-radius: 8px;">

@@ -8,7 +8,90 @@
         <i class="bi bi-plus-lg me-1"></i>
         Thêm phim
     </a>
+</div><?php
+$keyword = $_GET['keyword'] ?? '';
+$status = $_GET['status'] ?? '';
+$genre = $_GET['genre'] ?? '';
+$ageRating = $_GET['age_rating'] ?? '';
+$sort = $_GET['sort'] ?? 'status';
+$currentAction = $_GET['action'] ?? 'movie_list';
+$hasFilter = !empty($keyword) || !empty($status) || !empty($genre) || !empty($ageRating) || (!empty($sort) && $sort !== 'status');
+
+$currentPage = max(1, (int)($_GET['page'] ?? 1));
+$perPage = isset($perPage) && (int)$perPage > 0 ? (int)$perPage : 0;
+$sttCounter = $perPage > 0 ? (($currentPage - 1) * $perPage) + 1 : 1;
+?>
+
+<!-- Filter Panel -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" action="" class="row g-3 align-items-end">
+            <input type="hidden" name="action" value="<?= htmlspecialchars($currentAction) ?>">
+            <?php if (!empty($keyword)) : ?>
+                <input type="hidden" name="keyword" value="<?= htmlspecialchars($keyword) ?>">
+            <?php endif; ?>
+
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">Trạng thái phim</label>
+                <select name="status" class="form-select">
+                    <option value="">-- Tất cả --</option>
+                    <option value="now_showing" <?= $status === 'now_showing' ? 'selected' : '' ?>>Đang chiếu</option>
+                    <option value="coming_soon" <?= $status === 'coming_soon' ? 'selected' : '' ?>>Sắp chiếu</option>
+                    <option value="ended" <?= $status === 'ended' ? 'selected' : '' ?>>Ngừng chiếu</option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">Thể loại</label>
+                <input type="text" name="genre" class="form-control" placeholder="Nhập thể loại..." value="<?= htmlspecialchars($genre) ?>">
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">Độ tuổi</label>
+                <select name="age_rating" class="form-select">
+                    <option value="">-- Tất cả --</option>
+                    <?php
+                    $ratings = ['P', 'K', 'T13', 'T16', 'T18', 'C'];
+                    foreach ($ratings as $r) {
+                        $selected = $ageRating === $r ? 'selected' : '';
+                        echo "<option value=\"$r\" $selected>$r</option>";
+                    }
+                    ?>
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Sắp xếp theo</label>
+                <select name="sort" class="form-select">
+                    <option value="status" <?= $sort === 'status' ? 'selected' : '' ?>>Trạng thái ưu tiên</option>
+                    <option value="release_newest" <?= $sort === 'release_newest' ? 'selected' : '' ?>>Ngày khởi chiếu mới nhất</option>
+                    <option value="release_oldest" <?= $sort === 'release_oldest' ? 'selected' : '' ?>>Ngày khởi chiếu cũ nhất</option>
+                    <option value="title_asc" <?= $sort === 'title_asc' ? 'selected' : '' ?>>Tên phim A–Z</option>
+                    <option value="title_desc" <?= $sort === 'title_desc' ? 'selected' : '' ?>>Tên phim Z–A</option>
+                </select>
+            </div>
+
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-grow-1">
+                    <i class="bi bi-funnel me-1"></i> Lọc
+                </button>
+                <a href="<?= BASE_URL ?>?action=<?= htmlspecialchars($currentAction) ?>" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> Xóa bộ lọc
+                </a>
+            </div>
+        </form>
+    </div>
 </div>
+
+<?php if ($hasFilter) : ?>
+    <div class="alert alert-info py-2 mb-3">
+        <i class="bi bi-info-circle me-1"></i>
+        Hiển thị <?= count($movies) ?> kết quả
+        <?php if (!empty($keyword)) : ?>
+            cho từ khóa "<strong><?= htmlspecialchars($keyword) ?></strong>"
+        <?php endif; ?>
+    </div>
+<?php endif; ?>
 
 <div class="card">
     <div class="card-body p-0">
@@ -19,7 +102,7 @@
 
                 <thead class="table-light">
                     <tr>
-                        <th class="ps-4">#</th>
+                        <th class="ps-4">STT</th>
                         <th>Poster</th>
                         <th>Tên phim</th>
                         <th>Thể loại</th>
@@ -35,7 +118,7 @@
 
                     <?php if (!empty($movies)) : ?>
 
-                        <?php foreach ($movies as $movie) : ?>
+                        <?php foreach ($movies as $index => $movie) : ?>
 
                             <?php
                             $statusClass = match ($movie['status']) {
@@ -51,12 +134,14 @@
                                 'ended' => 'Ngừng chiếu',
                                 default => 'Không xác định',
                             };
+
+                            $rowStt = $perPage > 0 ? $sttCounter++ : $index + 1;
                             ?>
 
                             <tr>
 
                                 <td class="ps-4">
-                                    <?= $movie['id'] ?>
+                                    <?= $rowStt ?>
                                 </td>
 
                                 <td>
@@ -108,37 +193,22 @@
                                 </td>
                                 
 
-                                <td class="text-end pe-4">
+                                <td class="text-end pe-4 text-nowrap" style="width:170px;">
+    <div class="d-inline-flex gap-1">
+        <a href="<?= BASE_URL ?>?action=movie_show&id=<?= $movie['id'] ?>" class="btn btn-sm btn-outline-info">
+            <i class="bi bi-eye"></i>
+        </a>
 
-                                    <a
-                                        href="<?= BASE_URL ?>?action=movie_show&id=<?= $movie['id'] ?>"
-                                        class="btn btn-sm btn-outline-info me-1"
-                                        title="Chi tiết">
+        <a href="<?= BASE_URL ?>?action=movie_edit&id=<?= $movie['id'] ?>" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-pencil"></i>
+        </a>
 
-                                        <i class="bi bi-eye"></i>
-
-                                    </a>
-
-                                    <a
-                                        href="<?= BASE_URL ?>?action=movie_edit&id=<?= $movie['id'] ?>"
-                                        class="btn btn-sm btn-outline-primary me-1"
-                                        title="Sửa">
-
-                                        <i class="bi bi-pencil"></i>
-
-                                    </a>
-
-                                    <a
-                                        href="<?= BASE_URL ?>?action=movie_delete&id=<?= $movie['id'] ?>"
-                                        class="btn btn-sm btn-outline-danger"
-                                        onclick="return confirm('Bạn có chắc muốn xóa phim này?')"
-                                        title="Xóa">
-
-                                        <i class="bi bi-trash"></i>
-
-                                    </a>
-
-                                </td>
+        <a href="<?= BASE_URL ?>?action=movie_delete&id=<?= $movie['id'] ?>" class="btn btn-sm btn-outline-danger"
+            onclick="return confirm('Bạn có chắc muốn xóa phim này?')">
+            <i class="bi bi-trash"></i>
+        </a>
+    </div>
+</td>
 
                             </tr>
 
@@ -147,8 +217,8 @@
                     <?php else : ?>
 
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-5">
-                                Chưa có phim nào.
+                            <td colspan="9" class="text-center text-muted py-4">
+                                Không tìm thấy phim phù hợp.
                             </td>
                         </tr>
 

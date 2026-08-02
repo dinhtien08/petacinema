@@ -8,13 +8,24 @@
     </a>
 </div>
 
+<?php
+$keyword = $_GET['keyword'] ?? '';
+?>
+
+<?php if (!empty($keyword)) : ?>
+    <div class="alert alert-info py-2 mb-3">
+        <i class="bi bi-info-circle me-1"></i>
+        Showing <?= count($listUser) ?> result(s) for "<strong><?= htmlspecialchars($keyword) ?></strong>"
+    </div>
+<?php endif; ?>
+
 <div class="card">
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th class="ps-4">#</th>
+                        <th class="ps-4">STT</th>
                         <th>Họ và tên</th>
                         <th>Email</th>
                         <th>Vai trò</th>
@@ -25,7 +36,11 @@
                 </thead>
                 <tbody>
                     <?php if (!empty($listUser)) : ?>
-                        <?php foreach ($listUser as $user) : ?>
+                        <?php
+                            $index=0;
+                            foreach ($listUser as $user) :
+                            $index++;
+                            ?>
                             <?php
                             $roleClass = match ($user['role']) {
                                 'admin' => 'bg-danger',
@@ -39,7 +54,7 @@
                             };
                             ?>
                             <tr>
-                                <td class="ps-4"><?= $user['id'] ?></td>
+                                <td class="ps-4"><?= $index ?></td>
                                 <td class="fw-semibold"><?= htmlspecialchars($user['fullname']) ?></td>
                                 <td><?= htmlspecialchars($user['email']) ?></td>
                                 <td>
@@ -68,7 +83,12 @@
                         <?php endforeach; ?>
                     <?php else : ?>
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-5">Chưa có người dùng nào.</td>
+                            <td colspan="7" class="text-center py-4">
+                                <div class="alert alert-warning mb-0 d-inline-block px-4" role="alert">
+                                    <i class="bi bi-exclamation-triangle me-2"></i>
+                                    No matching data found.
+                                </div>
+                            </td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
