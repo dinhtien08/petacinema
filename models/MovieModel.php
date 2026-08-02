@@ -107,7 +107,7 @@ class MovieModel extends BaseModel
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
-    public function searchAndFilter($keyword = null, $status = null, $genre = null, $ageRating = null)
+    public function searchAndFilter($keyword = null, $status = null, $genre = null, $ageRating = null, $sort = 'status')
     {
         $sql = "SELECT * FROM {$this->table} WHERE 1=1";
         $params = [];
@@ -132,7 +132,43 @@ class MovieModel extends BaseModel
             $params[':age_rating'] = $ageRating;
         }
 
-        $sql .= " ORDER BY id DESC";
+        switch ($sort) {
+            case 'release_newest':
+                $sql .= " ORDER BY release_date DESC, title ASC";
+                break;
+
+            case 'release_oldest':
+                $sql .= " ORDER BY release_date ASC, title ASC";
+                break;
+
+            case 'title_asc':
+                $sql .= " ORDER BY title ASC";
+                break;
+
+            case 'title_desc':
+                $sql .= " ORDER BY title DESC";
+                break;
+
+            case 'status':
+            default:
+                $sql .= " ORDER BY
+                    CASE status
+                        WHEN 'now_showing' THEN 1
+                        WHEN 'coming_soon' THEN 2
+                        WHEN 'ended' THEN 3
+                        ELSE 4
+                    END ASC,
+                    CASE
+                        WHEN status = 'coming_soon'
+                        THEN release_date
+                    END ASC,
+                    CASE
+                        WHEN status IN ('now_showing', 'ended')
+                        THEN release_date
+                    END DESC,
+                    title ASC";
+                break;
+        }
 
         $stmt = $this->pdo->prepare($sql);
         foreach ($params as $key => $val) {

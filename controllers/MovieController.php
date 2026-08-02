@@ -7,9 +7,10 @@ class MovieController
         $status    = trim($_GET['status'] ?? '');
         $genre     = trim($_GET['genre'] ?? '');
         $ageRating = trim($_GET['age_rating'] ?? '');
+        $sort      = trim($_GET['sort'] ?? 'status');
 
         $movieModel = new MovieModel();
-        $movies = $movieModel->searchAndFilter($keyword, $status, $genre, $ageRating);
+        $movies = $movieModel->searchAndFilter($keyword, $status, $genre, $ageRating, $sort);
 
         $view ='admin/movie/list';
         require_once PATH_VIEW . 'admin/layout/layout.php';

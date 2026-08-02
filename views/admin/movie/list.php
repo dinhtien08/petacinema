@@ -8,15 +8,18 @@
         <i class="bi bi-plus-lg me-1"></i>
         Thêm phim
     </a>
-</div>
-
-<?php
+</div><?php
 $keyword = $_GET['keyword'] ?? '';
 $status = $_GET['status'] ?? '';
 $genre = $_GET['genre'] ?? '';
 $ageRating = $_GET['age_rating'] ?? '';
+$sort = $_GET['sort'] ?? 'status';
 $currentAction = $_GET['action'] ?? 'movie_list';
-$hasFilter = !empty($keyword) || !empty($status) || !empty($genre) || !empty($ageRating);
+$hasFilter = !empty($keyword) || !empty($status) || !empty($genre) || !empty($ageRating) || (!empty($sort) && $sort !== 'status');
+
+$currentPage = max(1, (int)($_GET['page'] ?? 1));
+$perPage = isset($perPage) && (int)$perPage > 0 ? (int)$perPage : 0;
+$sttCounter = $perPage > 0 ? (($currentPage - 1) * $perPage) + 1 : 1;
 ?>
 
 <!-- Filter Panel -->
@@ -28,25 +31,25 @@ $hasFilter = !empty($keyword) || !empty($status) || !empty($genre) || !empty($ag
                 <input type="hidden" name="keyword" value="<?= htmlspecialchars($keyword) ?>">
             <?php endif; ?>
 
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label fw-semibold">Trạng thái phim</label>
                 <select name="status" class="form-select">
-                    <option value="">-- Tất cả trạng thái --</option>
-                    <option value="now_showing" <?= $status === 'now_showing' ? 'selected' : '' ?>>Now Showing (Đang chiếu)</option>
-                    <option value="coming_soon" <?= $status === 'coming_soon' ? 'selected' : '' ?>>Coming Soon (Sắp chiếu)</option>
-                    <option value="ended" <?= $status === 'ended' ? 'selected' : '' ?>>Ended (Ngừng chiếu)</option>
+                    <option value="">-- Tất cả --</option>
+                    <option value="now_showing" <?= $status === 'now_showing' ? 'selected' : '' ?>>Đang chiếu</option>
+                    <option value="coming_soon" <?= $status === 'coming_soon' ? 'selected' : '' ?>>Sắp chiếu</option>
+                    <option value="ended" <?= $status === 'ended' ? 'selected' : '' ?>>Ngừng chiếu</option>
                 </select>
             </div>
 
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label fw-semibold">Thể loại</label>
                 <input type="text" name="genre" class="form-control" placeholder="Nhập thể loại..." value="<?= htmlspecialchars($genre) ?>">
             </div>
 
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label fw-semibold">Độ tuổi</label>
                 <select name="age_rating" class="form-select">
-                    <option value="">-- Tất cả độ tuổi --</option>
+                    <option value="">-- Tất cả --</option>
                     <?php
                     $ratings = ['P', 'K', 'T13', 'T16', 'T18', 'C'];
                     foreach ($ratings as $r) {
@@ -57,12 +60,23 @@ $hasFilter = !empty($keyword) || !empty($status) || !empty($genre) || !empty($ag
                 </select>
             </div>
 
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Sắp xếp theo</label>
+                <select name="sort" class="form-select">
+                    <option value="status" <?= $sort === 'status' ? 'selected' : '' ?>>Trạng thái ưu tiên</option>
+                    <option value="release_newest" <?= $sort === 'release_newest' ? 'selected' : '' ?>>Ngày khởi chiếu mới nhất</option>
+                    <option value="release_oldest" <?= $sort === 'release_oldest' ? 'selected' : '' ?>>Ngày khởi chiếu cũ nhất</option>
+                    <option value="title_asc" <?= $sort === 'title_asc' ? 'selected' : '' ?>>Tên phim A–Z</option>
+                    <option value="title_desc" <?= $sort === 'title_desc' ? 'selected' : '' ?>>Tên phim Z–A</option>
+                </select>
+            </div>
+
             <div class="col-md-3 d-flex gap-2">
                 <button type="submit" class="btn btn-primary flex-grow-1">
                     <i class="bi bi-funnel me-1"></i> Lọc
                 </button>
                 <a href="<?= BASE_URL ?>?action=<?= htmlspecialchars($currentAction) ?>" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-counterclockwise me-1"></i> Làm mới
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> Xóa bộ lọc
                 </a>
             </div>
         </form>
@@ -72,9 +86,9 @@ $hasFilter = !empty($keyword) || !empty($status) || !empty($genre) || !empty($ag
 <?php if ($hasFilter) : ?>
     <div class="alert alert-info py-2 mb-3">
         <i class="bi bi-info-circle me-1"></i>
-        Showing <?= count($movies) ?> result(s)
+        Hiển thị <?= count($movies) ?> kết quả
         <?php if (!empty($keyword)) : ?>
-            for "<strong><?= htmlspecialchars($keyword) ?></strong>"
+            cho từ khóa "<strong><?= htmlspecialchars($keyword) ?></strong>"
         <?php endif; ?>
     </div>
 <?php endif; ?>
@@ -88,7 +102,7 @@ $hasFilter = !empty($keyword) || !empty($status) || !empty($genre) || !empty($ag
 
                 <thead class="table-light">
                     <tr>
-                        <th class="ps-4">#</th>
+                        <th class="ps-4">STT</th>
                         <th>Poster</th>
                         <th>Tên phim</th>
                         <th>Thể loại</th>
@@ -104,7 +118,7 @@ $hasFilter = !empty($keyword) || !empty($status) || !empty($genre) || !empty($ag
 
                     <?php if (!empty($movies)) : ?>
 
-                        <?php foreach ($movies as $movie) : ?>
+                        <?php foreach ($movies as $index => $movie) : ?>
 
                             <?php
                             $statusClass = match ($movie['status']) {
@@ -120,12 +134,14 @@ $hasFilter = !empty($keyword) || !empty($status) || !empty($genre) || !empty($ag
                                 'ended' => 'Ngừng chiếu',
                                 default => 'Không xác định',
                             };
+
+                            $rowStt = $perPage > 0 ? $sttCounter++ : $index + 1;
                             ?>
 
                             <tr>
 
                                 <td class="ps-4">
-                                    <?= $movie['id'] ?>
+                                    <?= $rowStt ?>
                                 </td>
 
                                 <td>
@@ -201,11 +217,8 @@ $hasFilter = !empty($keyword) || !empty($status) || !empty($genre) || !empty($ag
                     <?php else : ?>
 
                         <tr>
-                            <td colspan="9" class="text-center py-4">
-                                <div class="alert alert-warning mb-0 d-inline-block px-4" role="alert">
-                                    <i class="bi bi-exclamation-triangle me-2"></i>
-                                    No matching data found.
-                                </div>
+                            <td colspan="9" class="text-center text-muted py-4">
+                                Không tìm thấy phim phù hợp.
                             </td>
                         </tr>
 
