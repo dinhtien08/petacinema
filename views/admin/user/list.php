@@ -36,7 +36,11 @@ $keyword = $_GET['keyword'] ?? '';
                 </thead>
                 <tbody>
                     <?php if (!empty($listUser)) : ?>
-                        <?php foreach ($listUser as $user) : ?>
+                        <?php
+                            $index=0;
+                            foreach ($listUser as $user) :
+                            $index++;
+                            ?>
                             <?php
                             $roleClass = match ($user['role']) {
                                 'admin' => 'bg-danger',
@@ -50,7 +54,7 @@ $keyword = $_GET['keyword'] ?? '';
                             };
                             ?>
                             <tr>
-                                <td class="ps-4"><?= $user['id'] ?></td>
+                                <td class="ps-4"><?= $index ?></td>
                                 <td class="fw-semibold"><?= htmlspecialchars($user['fullname']) ?></td>
                                 <td><?= htmlspecialchars($user['email']) ?></td>
                                 <td>
