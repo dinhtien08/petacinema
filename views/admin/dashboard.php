@@ -94,7 +94,37 @@ function dash_status_meta(string $status): array
     };
 }
 
+// --- Bộ lọc khoảng thời gian (date range) ---
+$fromDate = trim($_GET['from_date'] ?? '');
+$toDate   = trim($_GET['to_date'] ?? '');
+$hasDateFilter = false;
+
+if ($fromDate !== '' && $toDate !== '') {
+    try {
+        $fromDt = new DateTime($fromDate);
+        $toDt   = new DateTime($toDate);
+        if ($fromDt > $toDt) {
+            [$fromDt, $toDt] = [$toDt, $fromDt];
+        }
+        $fromDate = $fromDt->format('Y-m-d');
+        $toDate   = $toDt->format('Y-m-d');
+        $hasDateFilter = true;
+    } catch (Throwable $e) {
+        $fromDate = '';
+        $toDate = '';
+        $hasDateFilter = false;
+    }
+}
+
 $totalSeats = (int) dash_scalar($dashPdo, 'SELECT COUNT(*) FROM seats');
+
+if (!$hasDateFilter) {
+    // Chưa lọc: chỉ điền sẵn giá trị mặc định "từ trước đến nay" lên 2 ô ngày,
+    // không bật $hasDateFilter nên toàn bộ dữ liệu vẫn hiển thị như cũ (all-time).
+    $earliestBookingDate = dash_scalar($dashPdo, 'SELECT DATE(MIN(created_at)) FROM bookings', [], null);
+    $fromDate = $earliestBookingDate ?: date('Y-m-d');
+    $toDate   = date('Y-m-d');
+}
 $totalPayments = (int) dash_scalar(
     $dashPdo,
     'SELECT COUNT(*) FROM payments',
@@ -137,16 +167,51 @@ foreach ($monthlyRevenue as $row) {
     $monthMap[$row['y'] . '-' . str_pad((string) $row['m'], 2, '0', STR_PAD_LEFT)] = (float) $row['revenue'];
 }
 
-for ($i = 6; $i >= 0; $i--) {
-    $date = new DateTime('first day of this month');
-    $date->modify("-{$i} months");
-    $key = $date->format('Y-m');
-    $monthLabels[] = $date->format('m/Y');
-    $monthValues[] = $monthMap[$key] ?? 0;
+if ($hasDateFilter) {
+    // Doanh thu theo từng ngày trong khoảng đã chọn
+    $dailyRevenue = dash_rows($dashPdo, "
+        SELECT DATE(created_at) AS d, COALESCE(SUM(total_amount), 0) AS revenue
+        FROM bookings
+        WHERE status = 'paid'
+          AND created_at BETWEEN ? AND ?
+        GROUP BY DATE(created_at)
+        ORDER BY DATE(created_at)
+    ", [$fromDate . ' 00:00:00', $toDate . ' 23:59:59']);
+
+    $dailyMap = [];
+    foreach ($dailyRevenue as $row) {
+        $dailyMap[$row['d']] = (float) $row['revenue'];
+    }
+
+    $cursor = new DateTime($fromDate);
+    $end = new DateTime($toDate);
+    while ($cursor <= $end) {
+        $key = $cursor->format('Y-m-d');
+        $monthLabels[] = $cursor->format('d/m');
+        $monthValues[] = $dailyMap[$key] ?? 0;
+        $cursor->modify('+1 day');
+    }
+} else {
+    for ($i = 6; $i >= 0; $i--) {
+        $date = new DateTime('first day of this month');
+        $date->modify("-{$i} months");
+        $key = $date->format('Y-m');
+        $monthLabels[] = $date->format('m/Y');
+        $monthValues[] = $monthMap[$key] ?? 0;
+    }
+
+    if (array_sum($monthValues) == 0 && $totalRevenue > 0) {
+        $monthValues[count($monthValues) - 1] = (float) $totalRevenue;
+    }
 }
 
-if (array_sum($monthValues) == 0 && $totalRevenue > 0) {
-    $monthValues[count($monthValues) - 1] = (float) $totalRevenue;
+if ($hasDateFilter) {
+    $bookingStatus = dash_rows($dashPdo, "
+        SELECT status, COUNT(*) AS total
+        FROM bookings
+        WHERE created_at BETWEEN ? AND ?
+        GROUP BY status
+    ", [$fromDate . ' 00:00:00', $toDate . ' 23:59:59']);
 }
 
 $statusChart = [
@@ -181,6 +246,9 @@ foreach (['paid', 'pending', 'cancelled', 'refunded'] as $statusKey) {
     ];
 }
 
+$recentBookingsWhere = $hasDateFilter ? 'WHERE b.created_at BETWEEN ? AND ?' : '';
+$recentBookingsParams = $hasDateFilter ? [$fromDate . ' 00:00:00', $toDate . ' 23:59:59'] : [];
+
 $recentBookings = dash_rows($dashPdo, "
     SELECT
         b.booking_code,
@@ -212,24 +280,25 @@ $recentBookings = dash_rows($dashPdo, "
     LEFT JOIN movies m ON m.id = st.movie_id
     LEFT JOIN booking_seats bs ON bs.booking_id = b.id
     LEFT JOIN seats s ON s.id = bs.seat_id
+    {$recentBookingsWhere}
     GROUP BY b.id
     ORDER BY b.created_at DESC
     LIMIT 5
-");
+", $recentBookingsParams);
 
-if (empty($recentBookings)) {
+if (empty($recentBookings) && !$hasDateFilter) {
     $recentBookings = $dashDb->recentBookings();
 }
 
 $statCards = [
     ['label' => 'Users',     'value' => number_format($totalUsers),     'icon' => 'bi-people-fill',           'theme' => 'green',  'link' => '?action=users_list',     'growth' => $userGrowth],
     ['label' => 'Movies',    'value' => number_format($totalMovies),    'icon' => 'bi-film',                  'theme' => 'blue',   'link' => '?action=movie_list',         'growth' => $movieGrowth],
-    ['label' => 'Bookings',  'value' => number_format($totalBookings),  'icon' => 'bi-ticket-perforated-fill','theme' => 'orange', 'link' => '?action=bookings',       'growth' => $bookingGrowth],
-    ['label' => 'Revenue',   'value' => number_format($totalRevenue) . 'đ', 'icon' => 'bi-cash-stack',      'theme' => 'red',    'link' => '?action=payments',       'growth' => $revenueGrowth],
+    ['label' => 'Bookings',  'value' => number_format($totalBookings),  'icon' => 'bi-ticket-perforated-fill','theme' => 'orange', 'link' => '?action=booking_list',       'growth' => $bookingGrowth],
+    ['label' => 'Revenue',   'value' => number_format($totalRevenue) . 'đ', 'icon' => 'bi-cash-stack',      'theme' => 'red',    'link' => '?action=payment_list',       'growth' => $revenueGrowth],
     ['label' => 'Rooms',     'value' => number_format($totalRooms),     'icon' => 'bi-building',              'theme' => 'purple', 'link' => '?action=rooms',          'growth' => ['text' => '— Không đổi', 'class' => 'text-muted', 'icon' => 'bi-dash']],
     ['label' => 'Seats',     'value' => number_format($totalSeats),     'icon' => 'bi-grid-3x3-gap-fill',     'theme' => 'teal',   'link' => '?action=seat-types',     'growth' => ['text' => '— Không đổi', 'class' => 'text-muted', 'icon' => 'bi-dash']],
     ['label' => 'Foods',     'value' => number_format($totalFoods),     'icon' => 'bi-cup-hot-fill',          'theme' => 'pink',   'link' => '?action=food_list',      'growth' => $foodGrowth],
-    ['label' => 'Payments',  'value' => number_format($totalPayments),  'icon' => 'bi-credit-card-fill',      'theme' => 'gold',   'link' => '?action=payments',       'growth' => $paymentGrowth],
+    ['label' => 'Payments',  'value' => number_format($totalPayments),  'icon' => 'bi-credit-card-fill',      'theme' => 'gold',   'link' => '?action=payment_list',       'growth' => $paymentGrowth],
 ];
 ?>
 
@@ -266,6 +335,65 @@ $statCards = [
     padding: .55rem 1rem;
     color: #374151;
     font-weight: 500;
+}
+
+.date-range-filter {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: .4rem .6rem;
+}
+
+.date-range-input {
+    border: none;
+    outline: none;
+    color: #374151;
+    font-weight: 500;
+    font-size: .9rem;
+    background: transparent;
+}
+
+.date-range-sep {
+    color: #9ca3af;
+}
+
+.date-range-submit {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    border: none;
+    background: #dc3545;
+    color: #fff;
+    border-radius: 8px;
+    padding: .4rem .8rem;
+    font-size: .85rem;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.date-range-submit:hover {
+    background: #c82333;
+}
+
+.date-range-clear {
+    color: #9ca3af;
+    font-size: 1.1rem;
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+.date-range-clear:hover {
+    color: #dc3545;
+}
+
+@media (max-width: 767px) {
+    .date-range-filter {
+        flex-wrap: wrap;
+    }
 }
 
 .welcome-banner {
@@ -535,7 +663,22 @@ $statCards = [
 
 <div class="dashboard-header">
     <h2>Dashboard</h2>
-    <div class="dashboard-date"><?= date('d/m/Y') ?></div>
+    <form method="get" class="date-range-filter">
+        <input type="hidden" name="action" value="dashboard">
+        <input type="date" name="from_date" class="date-range-input"
+               value="<?= h($fromDate) ?>" max="<?= date('Y-m-d') ?>">
+        <span class="date-range-sep">—</span>
+        <input type="date" name="to_date" class="date-range-input"
+               value="<?= h($toDate) ?>" max="<?= date('Y-m-d') ?>">
+        <button type="submit" class="date-range-submit">
+            <i class="bi bi-filter-circle"></i> Lọc
+        </button>
+        <?php if ($hasDateFilter): ?>
+            <a href="?action=dashboard" class="date-range-clear" title="Bỏ lọc, xem tổng quan mặc định">
+                <i class="bi bi-x-circle"></i>
+            </a>
+        <?php endif; ?>
+    </form>
 </div>
 
 <div class="welcome-banner">
@@ -580,8 +723,12 @@ $statCards = [
     <div class="col-lg-7">
         <div class="chart-card">
             <div class="chart-card-header">
-                <h5>Doanh thu theo tháng</h5>
-                <span class="chart-filter">7 tháng gần nhất</span>
+                <h5>Doanh thu <?= $hasDateFilter ? 'theo ngày' : 'theo tháng' ?></h5>
+                <span class="chart-filter">
+                    <?= $hasDateFilter
+                        ? h(date('d/m/Y', strtotime($fromDate)) . ' - ' . date('d/m/Y', strtotime($toDate)))
+                        : '7 tháng gần nhất' ?>
+                </span>
             </div>
             <div class="chart-wrap">
                 <canvas id="revenueChart"></canvas>
@@ -617,7 +764,7 @@ $statCards = [
 <div class="recent-card">
     <div class="recent-card-header">
         <h5>Đặt vé gần đây</h5>
-        <a href="?action=bookings">Xem tất cả</a>
+        <a href="?action=booking_list">Xem tất cả</a>
     </div>
     <div class="table-responsive">
         <table class="table recent-table">

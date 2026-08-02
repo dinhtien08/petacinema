@@ -25,7 +25,7 @@ $keyword = $_GET['keyword'] ?? '';
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th class="ps-4">#</th>
+                        <th class="ps-4">STT</th>
                         <th>Họ và tên</th>
                         <th>Email</th>
                         <th>Vai trò</th>
