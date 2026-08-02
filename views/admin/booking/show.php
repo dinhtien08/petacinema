@@ -129,7 +129,7 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th width="60" class="ps-4">#</th>
+                        <th width="60" class="ps-4">STT</th>
                         <th>Mã vé</th>
                         <th>Số ghế</th>
                         <th>Loại ghế</th>
@@ -187,7 +187,7 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th width="60" class="ps-4">#</th>
+                        <th width="60" class="ps-4">STT</th>
                         <th>Tên món / Combo</th>
                         <th>Size</th>
                         <th class="text-center">Số lượng</th>
