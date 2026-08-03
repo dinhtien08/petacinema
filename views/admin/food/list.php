@@ -39,7 +39,7 @@
                             <td><?= $stt++ ?></td>
                             <td>
                                 <?php if (!empty($food['image'])): ?>
-                                    <img src="<?= h(BASE_ASSETS_UPLOADS . $food['image']) ?>" alt="" width="60" height="60" style="object-fit: cover; border-radius: 8px;">
+                                    <img src="<?= h(BASE_ASSETS_UPLOADS . $food['image']) ?>" alt="" width="130" height="130" style="object-fit: cover; border-radius: 8px;">
                                 <?php else: ?>
                                     <span class="text-muted">Không có ảnh</span>
                                 <?php endif; ?>
