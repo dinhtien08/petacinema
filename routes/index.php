@@ -102,5 +102,48 @@ match ($action) {
     //login logout
     'login' => (new AuthController)->login(),
     'logout' => (new AuthController)->logout(),
-    'register'=>(new AuthController)->register()
+    'register'=>(new AuthController)->register(),
+
+    //staff
+    // Room
+    'staff_rooms'        => (new StaffRoomController)->list(),
+    'staff_roomSeats'    => (new StaffRoomController)->seats(),
+
+    // Room Types
+    'staff_room-types'   => (new StaffRoomTypeController)->list(),
+
+    // Seat Types
+    'staff_seat-types'   => (new StaffSeatTypeController)->list(),
+
+    // Movie
+    'staff_movies'       => (new StaffMovieController)->list(),
+    'staff_movie_list'   => (new StaffMovieController)->list(),
+    'staff_movie_show'   => (new StaffMovieController)->show(),
+
+    // Dashboard
+    'staff_dashboard'    => (new StaffDashboardController)->dashboard(),
+
+    // Food
+    'staff_food_list'    => (new StaffFoodController)->list(),
+
+    // Food Variant
+    'staff_food_variant_list' => (new StaffFoodVariantController)->list(),
+
+    // Food Order
+    'staff_food_order_list' => (new StaffFoodOrderController)->list(),
+
+    // Booking
+    'staff_bookings'      => (new StaffBookingController)->list(),
+    'staff_booking_list'  => (new StaffBookingController)->list(),
+    'staff_booking_show'  => (new StaffBookingController)->show(),
+    'staff_booking_detail'=> (new StaffBookingController)->show(),
+
+    // Payment
+    'staff_payment_list'   => (new StaffPaymentController)->payment_list(),
+    'staff_payment_detail' => (new StaffPaymentController)->payment_detail(),
+
+    // Showtime
+    'staff_showtimes'      => (new StaffShowtimeController)->list(),
+    'staff_showtime_show'  => (new StaffShowtimeController)->show(),
+    'staff_showtimeSeats'  => (new StaffShowtimeController)->seats(),
 };

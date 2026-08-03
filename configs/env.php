@@ -8,6 +8,7 @@ define('PATH_VIEW',         PATH_ROOT . 'views/');
 
 define('PATH_VIEW_MAIN',    PATH_ROOT . 'views/main.php');
 define('PATH_VIEW_ADMIN',   PATH_ROOT . 'views/admin/');
+define('PATH_VIEW_STAFF',   PATH_ROOT . 'views/staff/');
 
 define('BASE_ASSETS', BASE_URL . 'assets/');
 
