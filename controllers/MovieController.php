@@ -10,9 +10,17 @@ class MovieController
         $sort      = trim($_GET['sort'] ?? 'status');
 
         $movieModel = new MovieModel();
-        $movies = $movieModel->getAll();
-        // debug($movies);
+
+        $movies = $movieModel->searchAndFilter(
+            $keyword,
+            $status,
+            $genre,
+            $ageRating,
+            $sort
+        );
+
         $view = 'admin/movie/list';
+
         require_once PATH_VIEW . 'admin/layout/layout.php';
     }
     public function delete()
