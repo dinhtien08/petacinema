@@ -20,6 +20,9 @@ define('PATH_CONTROLLER',       PATH_ROOT . 'controllers/');
 
 define('PATH_MODEL',            PATH_ROOT . 'models/');
 
+define('PATH_MIDDLEWARE',       PATH_ROOT . 'middlewares/');
+
+
 define('DB_HOST',     'localhost');
 define('DB_PORT',     '3306');
 define('DB_USERNAME', 'root');
