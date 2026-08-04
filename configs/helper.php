@@ -55,11 +55,37 @@ if (!function_exists('old_value')) {
     }
 }
 
+if (!function_exists('set_errors')) {
+    function set_errors($errors, $old = [])
+    {
+        $_SESSION['errors'] = $errors;
+        $_SESSION['old']    = $old;
+    }
+}
+
+if (!function_exists('get_errors')) {
+    function get_errors()
+    {
+        $errors = $_SESSION['errors'] ?? [];
+        unset($_SESSION['errors']);
+        return $errors;
+    }
+}
+
+if (!function_exists('get_old')) {
+    function get_old()
+    {
+        $old = $_SESSION['old'] ?? [];
+        unset($_SESSION['old']);
+        return $old;
+    }
+}
+
 if (!function_exists('field_error')) {
     function field_error($errors, $key)
     {
         if (!empty($errors[$key])) {
-            return '<div class="invalid-feedback d-block">' . h($errors[$key]) . '</div>';
+            return '<div class="text-white mt-1 small" style="color: #ffffff !important;"><i class="bi bi-exclamation-circle-fill me-1"></i>' . h($errors[$key]) . '</div>';
         }
         return '';
     }

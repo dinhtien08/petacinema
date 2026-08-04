@@ -385,20 +385,24 @@
             Đăng nhập vào hệ thống
         </p>
 
-        <?php $flash = get_flash(); ?>
+        <?php 
+        $flash  = get_flash(); 
+        $errors = get_errors();
+        $old    = get_old();
+        ?>
 
         <?php if ($flash): ?>
-            <div class="alert alert-danger">
-                <i class="bi bi-exclamation-circle-fill me-1"></i>
+            <div class="alert alert-<?= $flash['type'] === 'success' ? 'success' : 'danger' ?>">
+                <i class="bi bi-<?= $flash['type'] === 'success' ? 'check-circle-fill' : 'exclamation-circle-fill' ?> me-1"></i>
                 <?= h($flash['message']) ?>
             </div>
         <?php endif; ?>
 
-        <form method="post" action="?action=loginPost">
+        <form method="post" action="?action=loginPost" novalidate>
 
             <div class="mb-3">
                 <label for="email" class="form-label">
-                    Email
+                    Email / Tên đăng nhập
                 </label>
 
                 <div class="input-group">
@@ -413,8 +417,9 @@
                         class="form-control"
                         placeholder="Nhập địa chỉ email"
                         autocomplete="email"
-                        required>
+                        value="<?= old_value($old, 'email') ?>">
                 </div>
+                <?= field_error($errors, 'email') ?>
             </div>
 
             <div class="mb-3">
@@ -433,9 +438,9 @@
                         name="password"
                         class="form-control"
                         placeholder="Nhập mật khẩu"
-                        autocomplete="current-password"
-                        required>
+                        autocomplete="current-password">
                 </div>
+                <?= field_error($errors, 'password') ?>
             </div>
 
             <button

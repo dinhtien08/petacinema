@@ -265,16 +265,20 @@
         Đăng ký tài khoản
     </p>
 
-    <?php $flash = get_flash(); ?>
+    <?php 
+    $flash  = get_flash(); 
+    $errors = get_errors();
+    $old    = get_old();
+    ?>
 
     <?php if($flash): ?>
-        <div class="alert alert-danger">
-            <i class="bi bi-exclamation-circle-fill me-1"></i>
+        <div class="alert alert-<?= $flash['type'] === 'success' ? 'success' : 'danger' ?>">
+            <i class="bi bi-<?= $flash['type'] === 'success' ? 'check-circle-fill' : 'exclamation-circle-fill' ?> me-1"></i>
             <?= h($flash['message']) ?>
         </div>
     <?php endif; ?>
 
-    <form method="post" action="?action=registerStore">
+    <form method="post" action="?action=registerStore" novalidate>
 
         <div class="mb-3">
             <label class="form-label">Họ và tên</label>
@@ -289,8 +293,9 @@
                     name="fullname"
                     class="form-control"
                     placeholder="Nhập họ và tên"
-                    required>
+                    value="<?= old_value($old, 'fullname') ?>">
             </div>
+            <?= field_error($errors, 'fullname') ?>
         </div>
 
         <div class="mb-3">
@@ -306,8 +311,9 @@
                     name="email"
                     class="form-control"
                     placeholder="Nhập địa chỉ email"
-                    required>
+                    value="<?= old_value($old, 'email') ?>">
             </div>
+            <?= field_error($errors, 'email') ?>
         </div>
 
         <div class="mb-3">
@@ -322,9 +328,9 @@
                     type="password"
                     name="password"
                     class="form-control"
-                    placeholder="Nhập mật khẩu"
-                    required>
+                    placeholder="Nhập mật khẩu">
             </div>
+            <?= field_error($errors, 'password') ?>
         </div>
 
         <div class="mb-3">
@@ -339,9 +345,9 @@
                     type="password"
                     name="confirm_password"
                     class="form-control"
-                    placeholder="Nhập lại mật khẩu"
-                    required>
+                    placeholder="Nhập lại mật khẩu">
             </div>
+            <?= field_error($errors, 'confirm_password') ?>
         </div>
 
         <button

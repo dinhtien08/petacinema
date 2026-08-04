@@ -2,6 +2,11 @@
 
 $action = $_GET['action'] ?? '/';
 
+// Thực thi Middlewares kiểm tra và phân quyền
+GuestMiddleware::handle($action);
+AuthMiddleware::handle($action);
+RoleMiddleware::handle($action);
+
 match ($action) {
     '/'         => (new HomeController)->index(),
     // Rooms
@@ -100,9 +105,11 @@ match ($action) {
     'showtime_delete' => (new ShowtimeController)->delete(),
     'showtimeSeats' => (new ShowtimeController)->seats(),
     //login logout
-    'login' => (new AuthController)->login(),
-    'logout' => (new AuthController)->logout(),
-    'register'=>(new AuthController)->register(),
+    'login'         => (new AuthController)->login(),
+    'loginPost'     => (new AuthController)->loginPost(),
+    'logout'        => (new AuthController)->logout(),
+    'register'      => (new AuthController)->register(),
+    'registerStore' => (new AuthController)->registerStore(),
 
     //staff
     // Room
