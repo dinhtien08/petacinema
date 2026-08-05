@@ -172,4 +172,22 @@ class BookingController
         }
         return $normalized;
     }
+
+    public function myTickets()
+    {
+        if (!isset($_SESSION['user_id'])) {
+            set_flash('danger', 'Vui lòng đăng nhập để sử dụng chức năng này.');
+            header("Location: " . BASE_URL . "?action=login");
+            exit;
+        }
+
+        $userId = $_SESSION['user_id'];
+        $bookingModel = new BookingModel();
+        $myTickets = $bookingModel->getByUserId($userId);
+
+        $title = "Vé của tôi - PETACINEMA";
+        $view  = "client/my_tickets";
+
+        require_once PATH_VIEW . 'main.php';
+    }
 }

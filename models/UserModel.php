@@ -88,4 +88,14 @@ class UserModel extends BaseModel
         $stmt->execute();
         return $stmt->fetchAll();
     }
+
+    public function updatePassword($id, $hashedPassword)
+    {
+        $sql = "UPDATE users SET password = :password WHERE id = :id";
+        $stmt = $this->pdo->prepare($sql);
+        return $stmt->execute([
+            ':password' => $hashedPassword,
+            ':id'       => $id
+        ]);
+    }
 }

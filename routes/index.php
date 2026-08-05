@@ -104,12 +104,22 @@ match ($action) {
     'showtime_update' => (new ShowtimeController)->update(),
     'showtime_delete' => (new ShowtimeController)->delete(),
     'showtimeSeats' => (new ShowtimeController)->seats(),
-    //login logout
-    'login'         => (new AuthController)->login(),
-    'loginPost'     => (new AuthController)->loginPost(),
-    'logout'        => (new AuthController)->logout(),
-    'register'      => (new AuthController)->register(),
-    'registerStore' => (new AuthController)->registerStore(),
+    //login logout & profile
+    'login'              => (new AuthController)->login(),
+    'loginPost'          => (new AuthController)->loginPost(),
+    'logout'             => (new AuthController)->logout(),
+    'register'           => (new AuthController)->register(),
+    'registerStore'      => (new AuthController)->registerStore(),
+    'profile'            => (new AuthController)->profile(),
+    'change_password'    => (new AuthController)->changePassword(),
+    'changePasswordPost' => (new AuthController)->changePasswordPost(),
+
+    // Client Pages
+    'now_showing'        => (new MovieController)->nowShowing(),
+    'upcoming'           => (new MovieController)->upcoming(),
+    'my_tickets'         => (new BookingController)->myTickets(),
+    'news'               => (new HomeController)->news(),
+    'promotions'         => (new HomeController)->promotions(),
 
     //staff
     // Room

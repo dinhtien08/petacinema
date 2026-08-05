@@ -178,4 +178,28 @@ class MovieModel extends BaseModel
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    public function getNowShowingMovies()
+    {
+        $sql = "SELECT * FROM {$this->table} WHERE status = 'now_showing' ORDER BY release_date DESC";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getComingSoonMovies()
+    {
+        $sql = "SELECT * FROM {$this->table} WHERE status = 'coming_soon' ORDER BY release_date ASC";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getFeaturedMovies()
+    {
+        $sql = "SELECT * FROM {$this->table} WHERE status IN ('now_showing', 'coming_soon') ORDER BY id DESC LIMIT 5";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }

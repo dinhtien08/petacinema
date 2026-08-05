@@ -57,6 +57,20 @@ class ShowtimeModel extends BaseModel
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
+    public function getShowtimesByMovieId($movieId)
+    {
+        $sql = "SELECT s.*, r.name AS room_name, rt.name AS room_type_name
+                FROM showtimes s
+                JOIN rooms r ON r.id = s.room_id
+                JOIN room_types rt ON rt.id = r.room_type_id
+                WHERE s.movie_id = :movie_id
+                ORDER BY s.start_time ASC";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':movie_id' => $movieId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     /**
      * Thêm suất chiếu
      */

@@ -118,8 +118,8 @@ class AuthController
         // Validate Mật khẩu
         if (empty($password)) {
             $errors['password'] = 'Mật khẩu không được để trống.';
-        } elseif (strlen($password) < 8) {
-            $errors['password'] = 'Mật khẩu phải có ít nhất 8 ký tự.';
+        } elseif (strlen($password) < 6) {
+            $errors['password'] = 'Mật khẩu phải có ít nhất 6 ký tự.';
         }
 
         // Validate Xác nhận mật khẩu
@@ -167,7 +167,86 @@ class AuthController
         );
         session_destroy();
         session_start();
-        header("Location: " . BASE_URL . "?action=login");
+        header("Location: " . BASE_URL . "?action=/");
+        exit;
+    }
+
+    public function profile()
+    {
+        if (!isset($_SESSION['user_id'])) {
+            header("Location: " . BASE_URL . "?action=login");
+            exit;
+        }
+
+        $userId = $_SESSION['user_id'];
+        $user = $this->userModel->getById($userId);
+
+        $title = "Thông tin cá nhân - PETACINEMA";
+        $view  = "client/profile";
+
+        require_once PATH_VIEW . 'main.php';
+    }
+
+    public function changePassword()
+    {
+        if (!isset($_SESSION['user_id'])) {
+            header("Location: " . BASE_URL . "?action=login");
+            exit;
+        }
+
+        $title = "Đổi mật khẩu - PETACINEMA";
+        $view  = "client/change_password";
+
+        require_once PATH_VIEW . 'main.php';
+    }
+
+    public function changePasswordPost()
+    {
+        if (!isset($_SESSION['user_id'])) {
+            header("Location: " . BASE_URL . "?action=login");
+            exit;
+        }
+
+        $oldPassword        = $_POST['old_password'] ?? '';
+        $newPassword        = $_POST['new_password'] ?? '';
+        $confirmNewPassword = $_POST['confirm_new_password'] ?? '';
+        $errors             = [];
+
+        $userId = $_SESSION['user_id'];
+        $user   = $this->userModel->getById($userId);
+
+        if (empty($oldPassword)) {
+            $errors['old_password'] = 'Vui lòng nhập mật khẩu hiện tại.';
+        } else {
+            $isValid = password_verify($oldPassword, $user['password']) || $oldPassword === $user['password'];
+            if (!$isValid) {
+                $errors['old_password'] = 'Mật khẩu hiện tại không chính xác.';
+            }
+        }
+
+        if (empty($newPassword)) {
+            $errors['new_password'] = 'Vui lòng nhập mật khẩu mới.';
+        } elseif (strlen($newPassword) < 8) {
+            $errors['new_password'] = 'Mật khẩu mới phải có ít nhất 8 ký tự.';
+        }
+
+        if (empty($confirmNewPassword)) {
+            $errors['confirm_new_password'] = 'Vui lòng xác nhận mật khẩu mới.';
+        } elseif ($newPassword !== $confirmNewPassword) {
+            $errors['confirm_new_password'] = 'Mật khẩu xác nhận không trùng khớp.';
+        }
+
+        if (!empty($errors)) {
+            set_errors($errors);
+            header("Location: " . BASE_URL . "?action=change_password");
+            exit;
+        }
+
+        $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
+        $this->userModel->updatePassword($userId, $hashedPassword);
+
+        set_flash('success', 'Đổi mật khẩu thành công!');
+        header("Location: " . BASE_URL . "?action=profile");
         exit;
     }
 }

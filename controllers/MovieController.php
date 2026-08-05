@@ -298,4 +298,56 @@ class MovieController
         return $errors;
     }
 
+    public function nowShowing()
+    {
+        $keyword = trim($_GET['keyword'] ?? '');
+        $genre   = trim($_GET['genre'] ?? '');
+
+        $movieModel = new MovieModel();
+        $movies     = $movieModel->searchAndFilter($keyword, 'now_showing', $genre);
+
+        $title = "Phim Đang Chiếu - PETACINEMA";
+        $view  = "client/now_showing";
+
+        require_once PATH_VIEW . 'main.php';
+    }
+
+    public function upcoming()
+    {
+        $keyword = trim($_GET['keyword'] ?? '');
+        $genre   = trim($_GET['genre'] ?? '');
+
+        $movieModel = new MovieModel();
+        $movies     = $movieModel->searchAndFilter($keyword, 'coming_soon', $genre);
+
+        $title = "Phim Sắp Chiếu - PETACINEMA";
+        $view  = "client/upcoming";
+
+        require_once PATH_VIEW . 'main.php';
+    }
+
+    public function detail()
+    {
+        if (empty($_GET['id'])) {
+            header('Location: ' . BASE_URL);
+            exit;
+        }
+
+        $id = (int) $_GET['id'];
+        $movieModel    = new MovieModel();
+        $showtimeModel = new ShowtimeModel();
+
+        $movie = $movieModel->getById($id);
+        if (!$movie) {
+            header('Location: ' . BASE_URL);
+            exit;
+        }
+
+        $showtimes = $showtimeModel->getShowtimesByMovieId($id);
+
+        $title = h($movie['title']) . " - PETACINEMA";
+        $view  = "client/movie_detail";
+
+        require_once PATH_VIEW . 'main.php';
+    }
 }

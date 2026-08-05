@@ -407,4 +407,33 @@ class BookingModel extends BaseModel
         $sequence = (int) $stmt->fetchColumn() + 1;
         return $prefix . str_pad((string) $sequence, 4, '0', STR_PAD_LEFT);
     }
+
+    public function getByUserId($userId)
+    {
+        $sql = "SELECT b.*,
+                       m.title AS movie_title,
+                       m.poster AS movie_poster,
+                       m.duration AS movie_duration,
+                       st.start_time,
+                       st.end_time,
+                       r.name AS room_name,
+                       GROUP_CONCAT(
+                           DISTINCT se.seat_number
+                           ORDER BY se.row_char, se.col_num
+                           SEPARATOR ', '
+                       ) AS seat_numbers
+                FROM {$this->table} b
+                JOIN showtimes st ON st.id = b.showtime_id
+                JOIN movies m ON m.id = st.movie_id
+                LEFT JOIN rooms r ON r.id = st.room_id
+                LEFT JOIN tickets t ON t.booking_id = b.id
+                LEFT JOIN seats se ON se.id = t.seat_id
+                WHERE b.user_id = :user_id
+                GROUP BY b.id, m.title, m.poster, m.duration, st.start_time, st.end_time, r.name
+                ORDER BY b.id DESC";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':user_id' => $userId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }
