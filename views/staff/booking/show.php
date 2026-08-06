@@ -123,11 +123,27 @@
 </div>
 
 <!-- Booked Seats Table -->
+<?php
+$hasUncheckedTickets = false;
+if (!empty($tickets)) {
+    foreach ($tickets as $t) {
+        if (($t['checkin_status'] ?? 'pending') === 'pending') {
+            $hasUncheckedTickets = true;
+            break;
+        }
+    }
+}
+?>
 <div class="card shadow-sm border-0 mb-4">
-    <div class="card-header bg-white py-3">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
         <h5 class="card-title mb-0 fw-bold">
             <i class="bi bi-grid-3x3-gap me-2"></i> Danh sách ghế đã đặt
         </h5>
+        <?php if ($hasUncheckedTickets): ?>
+            <a href="?action=staff_booking_checkin_all&booking_id=<?= (int)$booking['id'] ?>" class="btn btn-success btn-sm">
+                <i class="bi bi-check2-all me-1"></i> Check-in Tất cả
+            </a>
+        <?php endif; ?>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
@@ -138,7 +154,11 @@
                         <th>Mã vé</th>
                         <th>Số ghế</th>
                         <th>Loại ghế</th>
-                        <th class="text-end pe-4">Giá vé</th>
+                        <th>Giá vé</th>
+                        <th>Trạng thái</th>
+                        <th>Thời gian quét</th>
+                        <th>Nhân viên</th>
+                        <th class="text-end pe-4">Hành động</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -162,14 +182,41 @@
                                     ?>
                                     <span class="badge <?= $seatTypeBadge ?>"><?= htmlspecialchars($ticket['seat_type_name'] ?? 'Standard') ?></span>
                                 </td>
-                                <td class="text-end pe-4 fw-semibold">
+                                <td class="fw-semibold">
                                     <?= number_format((float)$ticket['ticket_price'], 0, ',', '.') ?> đ
+                                </td>
+                                <td>
+                                    <?php if (($ticket['checkin_status'] ?? 'pending') === 'checked_in'): ?>
+                                        <span class="badge bg-success">Đã check-in</span>
+                                    <?php else: ?>
+                                        <span class="badge bg-warning text-dark">Chờ quét</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <?= !empty($ticket['checked_in_at']) ? date('d/m/Y H:i:s', strtotime($ticket['checked_in_at'])) : '-' ?>
+                                </td>
+                                <td>
+                                    <?= htmlspecialchars($ticket['checked_in_by_name'] ?? '-') ?>
+                                </td>
+                                <td class="text-end pe-4">
+                                    <?php if (($ticket['checkin_status'] ?? 'pending') === 'checked_in'): ?>
+                                        <a href="?action=staff_ticket_print&id=<?= (int)$ticket['ticket_id'] ?>" class="btn btn-outline-primary btn-sm">
+                                            <i class="bi bi-printer me-1"></i> In vé
+                                        </a>
+                                    <?php else: ?>
+                                        <a href="?action=staff_ticket_checkin&id=<?= (int)$ticket['ticket_id'] ?>&booking_id=<?= (int)$booking['id'] ?>" class="btn btn-primary btn-sm me-1">
+                                            <i class="bi bi-check-lg me-1"></i> Quét
+                                        </a>
+                                        <a href="?action=staff_ticket_checkin&id=<?= (int)$ticket['ticket_id'] ?>&booking_id=<?= (int)$booking['id'] ?>&print=1" class="btn btn-success btn-sm">
+                                            <i class="bi bi-printer me-1"></i> Quét & In
+                                        </a>
+                                    <?php endif; ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="5" class="text-center py-4 text-muted">
+                            <td colspan="9" class="text-center py-4 text-muted">
                                 Chưa có thông tin ghế đặt cho đơn hàng này.
                             </td>
                         </tr>
