@@ -340,4 +340,52 @@ class ShowtimeModel extends BaseModel
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
-}
+
+    /**
+     * Lấy các ngày chiếu còn hiệu lực của một phim
+     */
+    public function getAvailableDatesByMovie($movieId)
+    {
+        $sql = "SELECT DISTINCT DATE(start_time) AS show_date
+                FROM showtimes
+                WHERE movie_id = :movie_id
+                  AND end_time >= NOW()
+                ORDER BY show_date ASC";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->bindValue(':movie_id', (int) $movieId, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
+
+    /**
+     * Lấy các suất chiếu còn hiệu lực của một phim theo ngày đã chọn
+     */
+    public function getValidShowtimesByMovieAndDate($movieId, $date)
+    {
+        $sql = "SELECT 
+                    s.id,
+                    s.movie_id,
+                    s.room_id,
+                    s.start_time,
+                    s.end_time,
+                    s.base_price,
+                    r.name AS room_name,
+                    rt.name AS room_type_name
+                FROM showtimes s
+                INNER JOIN rooms r ON s.room_id = r.id
+                INNER JOIN room_types rt ON r.room_type_id = rt.id
+                WHERE s.movie_id = :movie_id
+                  AND DATE(s.start_time) = :date
+                  AND s.end_time >= NOW()
+                ORDER BY s.start_time ASC";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->bindValue(':movie_id', (int) $movieId, PDO::PARAM_INT);
+        $stmt->bindValue(':date', $date);
+        $stmt->execute();
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+}

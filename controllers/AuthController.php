@@ -77,12 +77,21 @@ class AuthController
 
         // Chuyển hướng theo Role
         if ($user['role'] === 'admin') {
+            unset($_SESSION['booking_return_url']);
             header("Location: " . BASE_URL . "?action=dashboard");
             exit;
         } elseif ($user['role'] === 'staff') {
+            unset($_SESSION['booking_return_url']);
             header("Location: " . BASE_URL . "?action=staff_dashboard");
             exit;
         } else {
+            $bookingReturnUrl = $_SESSION['booking_return_url'] ?? '';
+            unset($_SESSION['booking_return_url']);
+
+            if (is_string($bookingReturnUrl) && str_starts_with($bookingReturnUrl, BASE_URL . '?action=booking_date')) {
+                header("Location: " . $bookingReturnUrl);
+                exit;
+            }
             header("Location: " . BASE_URL);
             exit;
         }
@@ -118,8 +127,8 @@ class AuthController
         // Validate Mật khẩu
         if (empty($password)) {
             $errors['password'] = 'Mật khẩu không được để trống.';
-        } elseif (strlen($password) < 8) {
-            $errors['password'] = 'Mật khẩu phải có ít nhất 8 ký tự.';
+        } elseif (strlen($password) < 6) {
+            $errors['password'] = 'Mật khẩu phải có ít nhất 6 ký tự.';
         }
 
         // Validate Xác nhận mật khẩu
@@ -167,7 +176,7 @@ class AuthController
         );
         session_destroy();
         session_start();
-        header("Location: " . BASE_URL . "?action=login");
+        header("Location: " . BASE_URL);
         exit;
     }
 }

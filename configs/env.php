@@ -33,3 +33,4 @@ define('DB_OPTIONS', [
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
 ]);
 define('SHOWTIME_CLEANING_TIME', 20);
+date_default_timezone_set('Asia/Ho_Chi_Minh');
