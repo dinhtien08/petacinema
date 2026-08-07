@@ -8,7 +8,9 @@ AuthMiddleware::handle($action);
 RoleMiddleware::handle($action);
 
 match ($action) {
-    '/'         => (new HomeController)->index(),
+    '/'             => (new HomeController)->index(),
+    'movie_detail'  => (new HomeController)->movieDetail(),
+    'booking_date'  => (new HomeController)->bookingDate(),
     // Rooms
     'rooms'               => (new RoomController)->list(),
     'roomAdd'             => (new RoomController)->add(),
