@@ -90,9 +90,9 @@
     @media (max-width: 575.98px) { .cinema-movie-poster { width: 92px; height: 138px; } .cinema-date-tab { flex-basis: 74px; } .cinema-showtime-grid { grid-template-columns: repeat(3, 1fr); } }
 </style>
 
-<nav aria-label="breadcrumb" class="mb-4 small"><ol class="breadcrumb mb-0"><li class="breadcrumb-item"><a href="<?= BASE_URL ?>" class="text-danger text-decoration-none">Trang chủ</a></li><li class="breadcrumb-item active">Lịch chiếu theo rạp</li></ol></nav>
+<nav aria-label="breadcrumb" class="mb-4 small"><ol class="breadcrumb mb-0"><li class="breadcrumb-item"><a href="<?= BASE_URL ?>" class="text-danger text-decoration-none">Trang chủ</a></li><li class="breadcrumb-item active">Lịch chiếu</li></ol></nav>
 <section class="mb-5">
-    <div class="mb-4"><span class="badge bg-danger text-uppercase px-3 py-2 mb-2">Petacinema schedule</span><h1 class="h2 text-dark text-uppercase mb-1">Lịch chiếu theo rạp</h1><p class="text-secondary mb-0">Chọn ngày để xem các phim đang có lịch chiếu.</p></div>
+    <div class="mb-4"><span class="badge bg-danger text-uppercase px-3 py-2 mb-2">Petacinema schedule</span><h1 class="h2 text-dark text-uppercase mb-1">Lịch chiếu phim</h1><p class="text-secondary mb-0">Chọn ngày để xem các phim đang có lịch chiếu.</p></div>
     <div class="cinema-date-tabs mb-3" role="tablist" aria-label="Chọn ngày chiếu">
         <?php $dateIndex = 0; foreach (array_keys($days) as $date): ?><button type="button" class="cinema-date-tab<?= $date === $today ? ' active' : '' ?>" data-schedule-date="<?= h($date) ?>" role="tab" aria-selected="<?= $date === $today ? 'true' : 'false' ?>"><strong><?= date('d/m', strtotime($date)) ?></strong><small><?= $shortDays[(int) date('w', strtotime($date))] ?></small></button><?php $dateIndex++; endforeach; ?>
     </div>
