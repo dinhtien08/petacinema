@@ -167,7 +167,9 @@ class ShowtimeModel extends BaseModel
                     m.director,
                     m.release_date,
                     r.name AS room_name,
-                    rt.name AS room_type
+                    rt.name AS room_type,
+                    rt.name AS room_type_name,
+                    rt.price_modifier AS room_price_modifier
                 FROM showtimes s
                 INNER JOIN movies m
                     ON s.movie_id = m.id
@@ -236,7 +238,13 @@ class ShowtimeModel extends BaseModel
                         FROM tickets t
                         JOIN bookings b ON t.booking_id = b.id
                         WHERE b.showtime_id = s.id
-                          AND b.status IN ('pending', 'paid')
+                          AND (
+                              b.status = 'paid'
+                              OR (
+                                  b.status = 'pending'
+                                  AND b.created_at > DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+                              )
+                          )
                     ) AS booked_seats
                 FROM showtimes s
                 INNER JOIN movies m
@@ -349,7 +357,8 @@ class ShowtimeModel extends BaseModel
         $sql = "SELECT DISTINCT DATE(start_time) AS show_date
                 FROM showtimes
                 WHERE movie_id = :movie_id
-                  AND end_time >= NOW()
+                  AND start_time > NOW()
+                  AND start_time < DATE_ADD(CURDATE(), INTERVAL 8 DAY)
                 ORDER BY show_date ASC";
 
         $stmt = $this->pdo->prepare($sql);
@@ -372,13 +381,15 @@ class ShowtimeModel extends BaseModel
                     s.end_time,
                     s.base_price,
                     r.name AS room_name,
-                    rt.name AS room_type_name
+                    rt.name AS room_type_name,
+                    rt.price_modifier AS room_price_modifier
                 FROM showtimes s
                 INNER JOIN rooms r ON s.room_id = r.id
                 INNER JOIN room_types rt ON r.room_type_id = rt.id
                 WHERE s.movie_id = :movie_id
                   AND DATE(s.start_time) = :date
-                  AND s.end_time >= NOW()
+                  AND s.start_time > NOW()
+                  AND s.start_time < DATE_ADD(CURDATE(), INTERVAL 8 DAY)
                 ORDER BY s.start_time ASC";
 
         $stmt = $this->pdo->prepare($sql);

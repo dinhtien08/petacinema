@@ -381,7 +381,7 @@
                                     <h5 class="card-title text-dark mb-2"><?= h($showtime['movie_title']) ?></h5>
                                     <p class="card-text text-secondary small mb-2"><i class="bi bi-stars me-1 text-danger"></i><?= h($showtime['room_type']) ?></p>
                                     <p class="card-text text-secondary small mb-2"><i class="bi bi-calendar3 me-1 text-danger"></i><?= date('d/m/Y', strtotime($showtime['start_time'])) ?></p>
-                                    <p class="card-text text-secondary small mb-3"><i class="bi bi-clock me-1 text-danger"></i><?= date('H:i', strtotime($showtime['start_time'])) ?> · <?= h($showtime['room_name']) ?></p>
+                                    <p class="card-text text-secondary small mb-3"><i class="bi bi-clock me-1 text-danger"></i><?= date('H:i', strtotime($showtime['start_time'])) ?></p>
                                 </div>
                                 <a href="<?= BASE_URL ?>?action=booking_date&movie_id=<?= (int) $showtime['movie_id'] ?>&date=<?= h(date('Y-m-d', strtotime($showtime['start_time']))) ?>&showtime_id=<?= (int) $showtime['id'] ?>" class="btn btn-peta w-100"><i class="bi bi-ticket-perforated-fill me-1"></i>ĐẶT VÉ</a>
                             </div>

@@ -11,6 +11,10 @@ match ($action) {
     '/'             => (new HomeController)->index(),
     'movie_detail'  => (new HomeController)->movieDetail(),
     'booking_date'  => (new HomeController)->bookingDate(),
+    'booking_checkout' => (new BookingController)->checkout(),
+    'my_tickets'      => (new BookingController)->myTickets(),
+    'vnpay_return' => (new PaymentController)->vnpayReturn(),
+    'vnpay_ipn' => (new PaymentController)->vnpayIpn(),
     // Rooms
     'rooms'               => (new RoomController)->list(),
     'roomAdd'             => (new RoomController)->add(),
@@ -155,4 +159,6 @@ match ($action) {
     'staff_showtimes'      => (new StaffShowtimeController)->list(),
     'staff_showtime_show'  => (new StaffShowtimeController)->show(),
     'staff_showtimeSeats'  => (new StaffShowtimeController)->seats(),
+    
+    default => (new HomeController)->index()
 };

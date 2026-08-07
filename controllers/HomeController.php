@@ -64,6 +64,13 @@ class HomeController
             exit;
         }
 
+        // Dọn booking pending quá 5 phút để giải phóng ghế trước khi render sơ đồ.
+        try {
+            (new BookingModel())->expirePendingBookings();
+        } catch (Throwable $e) {
+            // Không chặn trang khách nếu tác vụ dọn dẹp tạm thời lỗi.
+        }
+
         $showtimeModel = new ShowtimeModel();
         
         // Lấy danh sách các ngày có suất chiếu còn hiệu lực
