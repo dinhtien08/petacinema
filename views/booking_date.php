@@ -8,13 +8,13 @@
 
     function formatDayOfWeek($dateStr) {
         $days = [
-            'Sunday' => 'Chủ Nhật',
-            'Monday' => 'Thứ Hai',
-            'Tuesday' => 'Thứ Ba',
-            'Wednesday' => 'Thứ Tư',
-            'Thursday' => 'Thứ Năm',
-            'Friday' => 'Thứ Sáu',
-            'Saturday' => 'Thứ Bảy'
+            'Sunday' => 'CN',
+            'Monday' => 'T2',
+            'Tuesday' => 'T3',
+            'Wednesday' => 'T4',
+            'Thursday' => 'T5',
+            'Friday' => 'T6',
+            'Saturday' => 'T7'
         ];
         $dayEng = date('l', strtotime($dateStr));
         $dayVie = $days[$dayEng] ?? $dayEng;
@@ -31,9 +31,24 @@
         }
     }
 
+    // Khi quay lại từ bước chọn đồ ăn, giữ lại các ghế khách đã chọn trước đó.
+    $preselectedSeatNumbers = [];
+    $preselectedSeatRaw = trim((string) ($_GET['selected_seats'] ?? ''));
+    if ($selectedShowtime && $preselectedSeatRaw !== '') {
+        $preselectedSeatNumbers = preg_split('/[\s,;]+/', strtoupper($preselectedSeatRaw));
+        $preselectedSeatNumbers = array_values(array_unique(array_filter(array_map('trim', $preselectedSeatNumbers))));
+    }
+
     $showtimeSeats = [];
     $seatRows = [];
     $seatPriceById = [];
+
+    // Dùng chung phụ thu loại ghế để hiển thị "giá từ" và tính đúng giá vé.
+    $seatTypeModel = new SeatTypeModel();
+    $surchargeByType = [];
+    foreach ($seatTypeModel->getAll() as $seatType) {
+        $surchargeByType[(int) $seatType['id']] = (float) $seatType['surcharge'];
+    }
 
     if ($selectedShowtime) {
         $seatModel = new SeatModel();
@@ -52,13 +67,9 @@
         }
         unset($rowSeats);
 
-        $seatTypeModel = new SeatTypeModel();
-        $surchargeByType = [];
-        foreach ($seatTypeModel->getAll() as $seatType) {
-            $surchargeByType[(int) $seatType['id']] = (float) $seatType['surcharge'];
-        }
         foreach ($showtimeSeats as $seat) {
             $seatPriceById[(int) $seat['id']] = (float) $selectedShowtime['base_price']
+                + (float) ($selectedShowtime['room_price_modifier'] ?? 0)
                 + ($surchargeByType[(int) $seat['seat_type_id']] ?? 0);
         }
     }
@@ -170,8 +181,13 @@
     .seat-price-line-name { color: var(--peta-text-main); font-weight: 700; }
     .seat-price-line-price { color: var(--peta-text-muted); font-size: .83rem; }
     .seat-price-total { background: #fff1f2; border-radius: .65rem; color: var(--peta-accent); }
-    .showtime-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: .85rem; }
-    .showtime-slot { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 90px; padding: .8rem; border: 1px solid #fecdd3; border-radius: .8rem; background: #fff; text-decoration: none; transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+    .showtime-format-list { display: grid; gap: 1.2rem; }
+    .showtime-format-group { border: 1px solid #e2e8f0; border-radius: .9rem; background: #f8fafc; padding: 1rem; }
+    .showtime-format-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .65rem; margin-bottom: .8rem; }
+    .showtime-format-badge { display: inline-flex; align-items: center; min-width: 86px; justify-content: center; border-radius: .55rem; background: #111827; color: #fff; font-size: .9rem; font-weight: 800; letter-spacing: .04em; padding: .45rem .75rem; }
+    .showtime-format-note { color: var(--peta-text-muted); font-size: .82rem; }
+    .showtime-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: .85rem; }
+    .showtime-slot { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 112px; padding: .8rem; border: 1px solid #fecdd3; border-radius: .8rem; background: #fff; text-decoration: none; transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
     .showtime-slot:hover { transform: translateY(-3px); border-color: var(--peta-accent); box-shadow: 0 8px 18px rgba(229, 9, 20, .14); }
     .showtime-slot.is-selected { border: 2px solid var(--peta-accent); background: #fff1f2; }
     .showtime-slot.is-soldout { cursor: not-allowed; border-color: #fecaca; background: #fef2f2; opacity: .78; }
@@ -180,19 +196,53 @@
     .seat-availability.is-high { color: #16a34a; }
     .seat-availability.is-low { color: #ea580c; }
     .seat-availability.is-none { color: #dc2626; }
-    .booking-confirm-dialog { max-width: 520px; width: 92vw; }
-    .booking-confirm-modal .modal-content { border: 0; border-radius: 1rem; box-shadow: 0 18px 52px rgba(15,23,42,.3); }
+    .peta-booking-dialog { border: 0; border-radius: 1rem; box-shadow: 0 18px 52px rgba(15,23,42,.3); max-width: 520px; padding: 0; width: min(92vw, 520px); }
+    .peta-booking-dialog::backdrop { background: rgba(15, 23, 42, .58); }
+    .peta-booking-dialog-content { background: #fff; border-radius: 1rem; overflow: hidden; }
     .seat-booking-overview { border: 1px solid var(--peta-card-border); border-radius: 1rem; background: #fff; box-shadow: 0 10px 28px rgba(15, 23, 42, .06); font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 1.15rem; }
     .seat-booking-overview dt { color: var(--peta-text-muted); font-size: .78rem; font-weight: 600; }
     .seat-booking-overview dd { color: var(--peta-text-main); font-size: .9rem; font-weight: 700; margin-bottom: 0; }
-    .seat-timer { background: #fff1f2; border-radius: .7rem; color: var(--peta-accent); min-width: 116px; padding: .6rem .8rem; text-align: center; }
-    .seat-timer strong { display: block; font-size: 1.35rem; letter-spacing: .05em; }
     .seat-category-summary { background: #f8fafc; border-radius: .7rem; }
-    .seat-layout { display: grid; grid-template-columns: minmax(0, 7fr) minmax(300px, 3fr); gap: 1.5rem; align-items: start; }
-    .seat-layout > :not(.seat-booking-overview) { grid-column: 1; }
-    .seat-booking-overview { grid-column: 2; grid-row: 1 / span 8; position: sticky; top: 92px; z-index: 1; }
+    /* Trang chọn ghế: dùng flex để hai cột chỉ cao theo đúng nội dung. */
+    .booking-seat-card {
+        height: auto !important;
+        min-height: 0 !important;
+        align-self: flex-start;
+    }
+    .seat-layout {
+        display: flex;
+        align-items: flex-start;
+        gap: 1.5rem;
+        width: 100%;
+        height: auto !important;
+        min-height: 0 !important;
+    }
+    .seat-main {
+        order: 1;
+        flex: 1 1 auto;
+        width: 0;
+        min-width: 0;
+        height: auto !important;
+        min-height: 0 !important;
+    }
+    .seat-booking-overview {
+        order: 2;
+        flex: 0 0 300px;
+        width: 300px;
+        position: sticky;
+        top: 92px;
+        z-index: 1;
+        align-self: flex-start;
+        height: auto !important;
+        min-height: 0 !important;
+    }
     .seat-sidebar-order { border-top: 1px solid var(--peta-card-border); margin-top: 1rem; padding-top: 1rem; }
-    @media (max-width: 991.98px) { .seat-layout { display: block; } .seat-booking-overview { position: static; margin-bottom: 1rem; } .seat-booking-overview .row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 991.98px) {
+        .seat-layout { display: flex; flex-direction: column; }
+        .seat-main { order: 1; width: 100%; }
+        .seat-booking-overview { position: static; order: 2; width: 100%; flex-basis: auto; margin-top: 1rem; margin-bottom: 0; }
+        .seat-booking-overview .row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
     @media (max-width: 576px) {
         .client-seat-map { padding: 0.5rem 0 1rem; }
         .client-seat { width: 2.25rem; height: 2.2rem; font-size: 0.68rem; }
@@ -227,7 +277,8 @@
     </div>
 </div>
 
-<div class="card card-cinema p-4 mb-5 shadow-sm">
+<div class="card card-cinema p-4 mb-5 shadow-sm<?= $selectedShowtime ? ' booking-seat-card' : '' ?>">
+    <?php if (!$selectedShowtime): ?>
     <form method="GET" action="<?= BASE_URL ?>" class="mb-4">
         <input type="hidden" name="action" value="booking_date">
         <input type="hidden" name="movie_id" value="<?= $movie['id'] ?>">
@@ -260,42 +311,127 @@
             Không tìm thấy suất chiếu hợp lệ cho ngày <strong><?= formatDayOfWeek($selectedDate) ?></strong>.
         </div>
     <?php else: ?>
-        <?php $availabilitySeatModel = $seatModel ?? new SeatModel(); ?>
-        <div class="showtime-grid">
-            <?php foreach ($showtimes as $st): ?>
-                <?php
-                    $startTime = date('H:i', strtotime($st['start_time']));
-                    $availableSeats = count(array_filter(
-                        $availabilitySeatModel->getSeatsForShowtime((int) $st['id'], (int) $st['room_id']),
-                        fn($seat) => ($seat['display_status'] ?? '') === 'available'
-                    ));
-                    $availabilityClass = $availableSeats === 0 ? 'is-none' : ($availableSeats < 30 ? 'is-low' : 'is-high');
-                    $isFull = $availableSeats === 0;
-                ?>
-                <?php if ($isFull): ?>
-                    <span class="showtime-slot is-soldout" aria-disabled="true"><span class="showtime-slot-time"><?= $startTime ?></span><span class="seat-availability <?= $availabilityClass ?>">Hết ghế</span></span>
-                <?php else: ?>
-                    <button type="button" class="showtime-slot<?= (int) $st['id'] === $selectedShowtimeId ? ' is-selected' : '' ?>" data-booking-showtime-choice data-url="<?= BASE_URL ?>?action=booking_date&amp;movie_id=<?= (int) $movie['id'] ?>&amp;date=<?= h($selectedDate) ?>&amp;showtime_id=<?= (int) $st['id'] ?>" data-time="<?= h($startTime) ?>"><span class="showtime-slot-time"><?= $startTime ?></span><span class="seat-availability <?= $availabilityClass ?>">Còn <?= $availableSeats ?> ghế</span></button>
-                <?php endif; ?>
+        <?php
+            $availabilitySeatModel = $seatModel ?? new SeatModel();
+            $roomTypeOrder = ['2D' => 1, '3D' => 2, 'IMAX' => 3, 'GOLD CLASS' => 4];
+            $showtimesByRoomType = [];
+
+            foreach ($showtimes as $st) {
+                $roomTypeName = trim((string) ($st['room_type_name'] ?? 'Khác'));
+                $showtimesByRoomType[$roomTypeName][] = $st;
+            }
+
+            uksort($showtimesByRoomType, function ($first, $second) use ($roomTypeOrder) {
+                $firstOrder = $roomTypeOrder[strtoupper($first)] ?? 99;
+                $secondOrder = $roomTypeOrder[strtoupper($second)] ?? 99;
+                return $firstOrder <=> $secondOrder ?: strcasecmp($first, $second);
+            });
+        ?>
+        <div class="showtime-format-list">
+            <?php foreach ($showtimesByRoomType as $roomTypeName => $roomTypeShowtimes): ?>
+                <section class="showtime-format-group" aria-label="Suất chiếu <?= h($roomTypeName) ?>">
+                    <div class="showtime-format-heading">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="showtime-format-badge"><?= h($roomTypeName) ?></span>
+                            <span class="showtime-format-note">Chọn giờ chiếu phù hợp</span>
+                        </div>
+                    </div>
+                    <div class="showtime-grid">
+                        <?php foreach ($roomTypeShowtimes as $st): ?>
+                            <?php
+                                $startTime = date('H:i', strtotime($st['start_time']));
+                                $seatsForSlot = $availabilitySeatModel->getSeatsForShowtime((int) $st['id'], (int) $st['room_id']);
+                                $availableSeatRows = array_values(array_filter(
+                                    $seatsForSlot,
+                                    fn($seat) => ($seat['display_status'] ?? '') === 'available'
+                                ));
+                                $availableSeats = count($availableSeatRows);
+                                $availabilityClass = $availableSeats === 0 ? 'is-none' : ($availableSeats < 30 ? 'is-low' : 'is-high');
+                                $isFull = $availableSeats === 0;
+
+                                $priceSeats = !empty($availableSeatRows) ? $availableSeatRows : $seatsForSlot;
+                                $seatSurcharges = array_map(
+                                    fn($seat) => (float) ($surchargeByType[(int) ($seat['seat_type_id'] ?? 0)] ?? 0),
+                                    $priceSeats
+                                );
+                                $minimumSeatSurcharge = !empty($seatSurcharges) ? min($seatSurcharges) : 0;
+                                $startingPrice = (float) $st['base_price']
+                                    + (float) ($st['room_price_modifier'] ?? 0)
+                                    + $minimumSeatSurcharge;
+                                $formattedStartingPrice = number_format($startingPrice, 0, ',', '.') . ' đ';
+                            ?>
+                            <?php if ($isFull): ?>
+                                <span class="showtime-slot is-soldout" aria-disabled="true">
+                                    <span class="showtime-slot-time"><?= $startTime ?></span>
+                                    <span class="seat-availability <?= $availabilityClass ?>">Hết ghế</span>
+                                </span>
+                            <?php else: ?>
+                                <button
+                                    type="button"
+                                    class="showtime-slot<?= (int) $st['id'] === $selectedShowtimeId ? ' is-selected' : '' ?>"
+                                    data-booking-showtime-choice
+                                    data-url="<?= BASE_URL ?>?action=booking_date&amp;movie_id=<?= (int) $movie['id'] ?>&amp;date=<?= h($selectedDate) ?>&amp;showtime_id=<?= (int) $st['id'] ?>"
+                                    data-time="<?= h($startTime) ?>"
+                                    data-format="<?= h($roomTypeName) ?>"
+                                    data-price="<?= h($formattedStartingPrice) ?>"
+                                >
+                                    <span class="showtime-slot-time"><?= $startTime ?></span>
+                                    <span class="seat-availability <?= $availabilityClass ?>">Còn <?= $availableSeats ?> ghế</span>
+                                </button>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+                    </div>
+                </section>
             <?php endforeach; ?>
         </div>
 
-        <div class="modal fade booking-confirm-modal" id="bookingShowtimeModal" tabindex="-1" aria-labelledby="bookingShowtimeModalTitle" aria-hidden="true"><div class="modal-dialog modal-dialog-centered booking-confirm-dialog"><div class="modal-content"><div class="modal-header border-0 pb-0"><h2 class="modal-title h5 text-dark" id="bookingShowtimeModalTitle">Xác nhận suất chiếu</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button></div><div class="modal-body text-center"><h3 class="h4 text-danger fw-bold mb-3"><?= h($movie['title']) ?></h3><p class="mb-1"><span class="text-secondary">Ngày chiếu:</span> <?= h(date('d/m/Y', strtotime($selectedDate))) ?></p><p class="mb-0"><span class="text-secondary">Giờ chiếu:</span> <strong id="booking-modal-time"></strong></p></div><div class="modal-footer border-0 justify-content-center"><a id="booking-modal-confirm" class="btn btn-peta px-4" href="#">Đồng ý</a></div></div></div></div>
+        <dialog class="peta-booking-dialog" id="bookingShowtimeDialog" aria-labelledby="bookingShowtimeDialogTitle">
+    <div class="peta-booking-dialog-content">
+        <div class="modal-header border-0 pb-0">
+            <h2 class="modal-title h5 text-dark" id="bookingShowtimeDialogTitle">Xác nhận suất chiếu</h2>
+            <button type="button" class="btn-close" data-booking-dialog-close aria-label="Đóng"></button>
+        </div>
+        <div class="modal-body text-center">
+            <h3 class="h4 text-danger fw-bold mb-3"><?= h($movie['title']) ?></h3>
+            <p class="mb-1"><span class="text-secondary">Ngày chiếu:</span> <?= h(date('d/m/Y', strtotime($selectedDate))) ?></p>
+            <p class="mb-1"><span class="text-secondary">Định dạng:</span> <strong id="booking-modal-format"></strong></p>
+            <p class="mb-1"><span class="text-secondary">Giờ chiếu:</span> <strong id="booking-modal-time"></strong></p>
+            <p class="mb-0"><span class="text-secondary">Giá vé:</span> <strong>Từ <span id="booking-modal-price"></span></strong></p>
+        </div>
+        <div class="modal-footer border-0 justify-content-center">
+            <a id="booking-modal-confirm" class="btn btn-peta px-4" href="#">Đồng ý</a>
+        </div>
+    </div>
+</dialog>
+    <?php endif; ?>
+    <?php endif; ?>
 
         <?php if ($selectedShowtime): ?>
-            <hr class="border-secondary-subtle my-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 border-bottom pb-3 mb-4">
+                <div>
+                    <span class="text-secondary small d-block mb-1">Suất chiếu đã chọn</span>
+                    <strong class="text-dark"><?= h($selectedShowtime['room_type_name'] ?? '') ?> · <?= date('d/m/Y', strtotime($selectedDate)) ?> · <?= date('H:i', strtotime($selectedShowtime['start_time'])) ?></strong>
+                </div>
+            </div>
 
             <?php if (!empty($movie['age_rating']) && strtoupper($movie['age_rating']) !== 'P'): ?>
                 <div class="alert alert-warning border-0 small mb-3"><i class="bi bi-exclamation-triangle-fill me-2"></i>Theo quy định của Cục Điện ảnh, phim này không dành cho khán giả dưới <?= h(preg_replace('/\D+/', '', $movie['age_rating'])) ?: h($movie['age_rating']) ?> tuổi.</div>
             <?php endif; ?>
 
+            <?php if (($_GET['combo_timeout'] ?? '') === '1'): ?>
+                <div class="alert alert-warning border-0 shadow-sm small mb-3">
+                    <i class="bi bi-clock-history me-2"></i>
+                    Đã hết 5 phút chọn đồ ăn. Các ghế bạn chọn trước đó đã được khôi phục; vui lòng kiểm tra lại rồi tiếp tục.
+                </div>
+            <?php endif; ?>
+
             <div class="seat-layout">
             <aside class="seat-booking-overview">
                 <div class="row row-cols-1 g-3 flex-grow-1"><div class="col"><dl><dt>Phim</dt><dd><?= h($movie['title']) ?></dd></dl></div><div class="col"><dl><dt>Định dạng</dt><dd><?= h($selectedShowtime['room_type_name']) ?></dd></dl></div><div class="col"><dl><dt>Thể loại</dt><dd><?= h($movie['genres']) ?></dd></dl></div><div class="col"><dl><dt>Thời lượng</dt><dd><?= h($movie['duration']) ?> phút</dd></dl></div><div class="col"><dl><dt>Rạp chiếu</dt><dd>PETACINEMA</dd></dl></div><div class="col"><dl><dt>Ngày chiếu</dt><dd><?= date('d/m/Y', strtotime($selectedDate)) ?></dd></dl></div><div class="col"><dl><dt>Giờ chiếu</dt><dd><?= date('H:i', strtotime($selectedShowtime['start_time'])) ?></dd></dl></div><div class="col"><dl><dt>Ghế đã chọn</dt><dd id="seat-overview-selected">Chưa chọn</dd></dl></div></div>
-                <div class="seat-timer mt-3"><span class="small fw-semibold">Thời gian còn lại</span><strong id="seat-countdown">10:00</strong></div>
                 <div class="seat-sidebar-order"><h5 class="h6 text-dark mb-2">Thông tin đặt vé</h5><div id="selected-seat-price-details" class="small text-secondary">Chưa chọn ghế.</div><div id="seat-category-summary" class="seat-category-summary small p-3 mt-3 text-secondary">Chưa chọn ghế.</div><div class="seat-price-total d-flex justify-content-between align-items-center px-3 py-2 mt-3 fw-bold"><span>Tổng tiền ghế</span><span id="selected-seat-total">0 VNĐ</span></div></div>
             </aside>
 
+            <div class="seat-main">
             <h4 class="h5 text-dark mb-3"><i class="bi bi-grid-3x3-gap-fill me-2 text-danger"></i>Chọn ghế</h4>
 
             <?php if ($comboError !== ''): ?>
@@ -410,20 +546,39 @@
                     </form>
                 <?php endif; ?>
             </div>
-            </div>
+            </div><!-- /.seat-main -->
+            </div><!-- /.seat-layout -->
         <?php endif; ?>
-    <?php endif; ?>
 </div>
 
 <script>
-    window.addEventListener('load', () => {
-        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('bookingShowtimeModal'));
-        document.querySelectorAll('[data-booking-showtime-choice]').forEach((button) => button.addEventListener('click', () => {
-            document.getElementById('booking-modal-time').textContent = button.dataset.time;
-            document.getElementById('booking-modal-confirm').href = button.dataset.url;
-            modal.show();
-        }));
-    }, { once: true });
+    const bookingDialog = document.getElementById('bookingShowtimeDialog');
+    const bookingConfirmLink = document.getElementById('booking-modal-confirm');
+
+    document.querySelectorAll('[data-booking-showtime-choice]').forEach((button) => {
+        button.addEventListener('click', (event) => {
+            event.preventDefault();
+
+            document.getElementById('booking-modal-format').textContent = button.dataset.format || '';
+            document.getElementById('booking-modal-time').textContent = button.dataset.time || '';
+            document.getElementById('booking-modal-price').textContent = button.dataset.price || '';
+            bookingConfirmLink.href = button.dataset.url || '#';
+
+            if (bookingDialog && !bookingDialog.open) {
+                bookingDialog.showModal();
+            }
+        });
+    });
+
+    document.querySelector('[data-booking-dialog-close]')?.addEventListener('click', () => {
+        bookingDialog?.close();
+    });
+
+    bookingDialog?.addEventListener('click', (event) => {
+        if (event.target === bookingDialog) {
+            bookingDialog.close();
+        }
+    });
 
     const updateSelectedSeatSummary = () => {
         const selectedButtons = [...document.querySelectorAll('.client-seat[data-seat-number].is-selected')];
@@ -538,16 +693,30 @@
         });
     });
 
-    const countdownElement = document.getElementById('seat-countdown');
-    if (countdownElement) {
-        let remainingSeconds = 600;
-        const updateCountdown = () => {
-            const minutes = Math.floor(remainingSeconds / 60);
-            const seconds = remainingSeconds % 60;
-            countdownElement.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-            if (remainingSeconds > 0) remainingSeconds -= 1;
-        };
-        updateCountdown();
-        setInterval(updateCountdown, 1000);
+    // Khôi phục các ghế đã chọn nếu khách quay lại từ bước chọn đồ ăn.
+    const preselectedSeatNumbers = new Set(<?= json_encode($preselectedSeatNumbers, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>);
+    if (preselectedSeatNumbers.size > 0) {
+        document.querySelectorAll('.client-seat[data-seat-number]:not(:disabled)').forEach((button) => {
+            if (preselectedSeatNumbers.has(button.dataset.seatNumber)) {
+                button.classList.add('is-selected');
+            }
+        });
+
+        // Nếu một ghế Couple được khôi phục thì luôn khôi phục đủ cả cặp.
+        const selectedCoupleGroups = new Set(
+            [...document.querySelectorAll('.client-seat[data-couple-group].is-selected')]
+                .map((button) => button.dataset.coupleGroup)
+                .filter(Boolean)
+        );
+        selectedCoupleGroups.forEach((group) => {
+            document.querySelectorAll('.client-seat[data-couple-group]:not(:disabled)').forEach((button) => {
+                if (button.dataset.coupleGroup === group) {
+                    button.classList.add('is-selected');
+                }
+            });
+        });
+
+        updateSelectedSeatSummary();
     }
+
 </script>

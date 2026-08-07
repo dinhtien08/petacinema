@@ -1,7 +1,7 @@
-<div class="alert alert-info py-2 mb-3">
+<!-- <div class="alert alert-info py-2 mb-3">
     <i class="bi bi-info-circle me-1"></i>
     Chức năng này chỉ dùng để kiểm thử dữ liệu. Booking thực tế được tạo từ quy trình đặt vé online.
-</div>
+</div> -->
 
 <div class="d-flex align-items-center justify-content-between mb-4">
     <div>
@@ -9,10 +9,10 @@
         <p class="text-muted mb-0">Quản lý đơn đặt vé (Read-only)</p>
     </div>
 
-    <a href="<?= BASE_URL ?>?action=booking_add" class="btn btn-danger">
+    <!-- <a href="<?= BASE_URL ?>?action=booking_add" class="btn btn-danger">
         <i class="bi bi-plus-lg me-1"></i>
         Thêm dữ liệu test
-    </a>
+    </a> -->
 </div>
 
 <?php if (!empty($flash)) : ?>

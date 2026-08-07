@@ -61,6 +61,18 @@
     $grandTotal = $ticketTotalForCombo + $foodTotal;
     $groupLabels = ['popcorn' => ['Bắp', 'cup-hot'], 'drink' => ['Nước', 'cup-straw'], 'combo' => ['Combo', 'gift']];
     $poster = trim((string) ($movie['poster'] ?? ''));
+
+    $selectedSeatNumbersForCombo = array_values(array_column($selectedSeatsForCombo, 'seat_number'));
+    $seatReturnQuery = [
+        'action' => 'booking_date',
+        'movie_id' => (int) $movie['id'],
+        'date' => $selectedDate,
+        'showtime_id' => (int) $selectedShowtimeId,
+        'selected_seats' => implode(',', $selectedSeatNumbersForCombo),
+    ];
+    $returnToSeatsUrl = BASE_URL . '?' . http_build_query($seatReturnQuery);
+    $timeoutReturnUrl = BASE_URL . '?' . http_build_query($seatReturnQuery + ['combo_timeout' => 1]);
+    $vnpayConfigured = VnpayService::isConfigured();
 ?>
 
 <style>
@@ -83,12 +95,23 @@
     .price-row { padding: .6rem 0; border-bottom: 1px dashed #e2e8f0; }
     .price-row:last-of-type { border-bottom: 0; }
     .grand-total { background: #fff1f2; color: var(--peta-accent); border-radius: .7rem; }
+    .combo-countdown-box { border: 1px solid #fecdd3; border-radius: .8rem; background: #fff7f7; padding: .8rem 1rem; }
+    .combo-countdown-value { color: var(--peta-accent); font-size: 1.35rem; font-weight: 800; letter-spacing: .04em; }
+    .combo-countdown-box.is-urgent { background: #fff1f2; border-color: var(--peta-accent); }
 </style>
 
 <nav aria-label="breadcrumb" class="mb-4 small"><ol class="breadcrumb mb-0"><li class="breadcrumb-item"><a href="<?= BASE_URL ?>" class="text-danger text-decoration-none">Trang chủ</a></li><li class="breadcrumb-item active">Xác nhận đặt vé</li></ol></nav>
 
-<form id="combo-form" method="POST" action="<?= BASE_URL ?>?action=booking_date">
-    <input type="hidden" name="movie_id" value="<?= (int) $movie['id'] ?>"><input type="hidden" name="date" value="<?= h($selectedDate) ?>"><input type="hidden" name="showtime_id" value="<?= (int) $selectedShowtimeId ?>"><input type="hidden" name="booking_step" value="adjust_combo"><input type="hidden" name="seat_numbers" value="<?= h(implode(',', array_column($selectedSeatsForCombo, 'seat_number'))) ?>">
+<?php if (!$vnpayConfigured): ?>
+    <div class="alert alert-danger border-0 shadow-sm" role="alert">
+        <strong>VNPay Sandbox chưa được cấu hình.</strong><br>
+        Vui lòng điền <code>VNPAY_TMN_CODE</code> và <code>VNPAY_HASH_SECRET</code> thật do VNPay Sandbox cấp trong <code>configs/env.php</code>.
+        Khi còn giá trị <code>YOUR_TMN_CODE</code>/<code>YOUR_HASH_SECRET</code>, hệ thống sẽ không chuyển sang cổng thanh toán.
+    </div>
+<?php endif; ?>
+
+<form id="combo-form" method="POST" action="<?= BASE_URL ?>?action=booking_checkout">
+    <input type="hidden" name="movie_id" value="<?= (int) $movie['id'] ?>"><input type="hidden" name="date" value="<?= h($selectedDate) ?>"><input type="hidden" name="showtime_id" value="<?= (int) $selectedShowtimeId ?>"><input type="hidden" name="seat_numbers" value="<?= h(implode(',', array_column($selectedSeatsForCombo, 'seat_number'))) ?>">
     <div class="row g-4 align-items-start">
         <main class="col-lg-8">
             <section class="confirmation-section mb-4">
@@ -122,13 +145,20 @@
 
         <aside class="col-lg-4"><div class="card order-panel p-3 p-md-4">
             <h2 class="h5 text-dark border-bottom pb-3 mb-3">THÔNG TIN ĐƠN HÀNG</h2>
+            <div class="combo-countdown-box d-flex align-items-center justify-content-between gap-3 mb-3" id="combo-countdown-box">
+                <div>
+                    <span class="d-block small text-secondary">Thời gian chọn đồ ăn</span>
+                    <small class="text-secondary">Hết giờ sẽ quay lại bước chọn ghế.</small>
+                </div>
+                <strong class="combo-countdown-value text-nowrap" id="combo-countdown">05:00</strong>
+            </div>
             <div class="d-flex gap-3 mb-3"><?php if ($poster !== ''): ?><img class="order-poster" src="<?= h(str_starts_with($poster, 'http') ? $poster : BASE_ASSETS_UPLOADS . $poster) ?>" alt="<?= h($movie['title']) ?>"><?php else: ?><div class="order-poster d-flex align-items-center justify-content-center text-secondary"><i class="bi bi-film fs-2"></i></div><?php endif; ?><div class="small"><h3 class="h6 text-dark mb-2"><?= h($movie['title']) ?></h3><p class="mb-1"><span class="text-secondary">Định dạng:</span> <?= h($selectedShowtime['room_type_name'] ?? '-') ?></p><p class="mb-1"><span class="text-secondary">Thể loại:</span> <?= h($movie['genres']) ?></p><p class="mb-0"><span class="text-secondary">Thời lượng:</span> <?= h($movie['duration']) ?> phút</p></div></div>
             <div class="small border-top pt-3 mb-3"><p class="mb-1"><span class="text-secondary">Rạp chiếu:</span> PETACINEMA</p><p class="mb-1"><span class="text-secondary">Ngày chiếu:</span> <?= date('d/m/Y', strtotime($selectedDate)) ?></p><p class="mb-1"><span class="text-secondary">Giờ chiếu:</span> <?= date('H:i', strtotime($selectedShowtime['start_time'])) ?></p><p class="mb-0"><span class="text-secondary">Ghế:</span> <?= h(implode(', ', array_column($selectedSeatsForCombo, 'seat_number'))) ?></p></div>
             <h3 class="h6 text-dark border-top pt-3 mb-2">CHI TIẾT GIÁ</h3><div class="small" id="price-breakdown">
                 <?php foreach ($ticketLines as $line): ?><div class="price-row d-flex justify-content-between gap-2"><div><strong class="d-block text-dark"><?= h($line['name']) ?> · <?= h($line['seats']) ?></strong><span><?= $line['quantity'] ?> × <?= number_format($line['unit_price'], 0, ',', '.') ?> VNĐ</span></div><strong class="text-nowrap"><?= number_format($line['total'], 0, ',', '.') ?> VNĐ</strong></div><?php endforeach; ?>
                 <div id="selected-combo-lines"></div></div>
             <div class="d-flex justify-content-between small mt-3"><span>Tiền vé</span><strong><?= number_format($ticketTotalForCombo, 0, ',', '.') ?> VNĐ</strong></div><div class="d-flex justify-content-between small mt-2"><span>Tiền Combo</span><strong id="food-total"><?= number_format($foodTotal, 0, ',', '.') ?> VNĐ</strong></div><div class="grand-total d-flex justify-content-between mt-3 px-3 py-3 fw-bold"><span>TỔNG THANH TOÁN</span><span id="grand-total"><?= number_format($grandTotal, 0, ',', '.') ?> VNĐ</span></div>
-            <div class="d-grid gap-2 mt-3"><a href="<?= BASE_URL ?>?action=booking_date&amp;movie_id=<?= (int) $movie['id'] ?>&amp;date=<?= h($selectedDate) ?>&amp;showtime_id=<?= (int) $selectedShowtimeId ?>" class="btn btn-outline-peta">Quay lại chọn ghế</a><button type="button" class="btn btn-peta">Tiếp tục thanh toán <i class="bi bi-arrow-right ms-1"></i></button></div>
+            <div class="d-grid gap-2 mt-3"><a id="combo-back-to-seats" href="<?= h($returnToSeatsUrl) ?>" class="btn btn-outline-peta">Quay lại chọn ghế</a><button type="submit" id="checkout-button" class="btn btn-peta"<?= $vnpayConfigured ? '' : ' disabled' ?>><?= $vnpayConfigured ? 'Thanh toán VNPay <i class="bi bi-arrow-right ms-1"></i>' : 'VNPay chưa được cấu hình' ?></button></div>
         </div></aside>
     </div>
 </form>
@@ -175,5 +205,73 @@
             panel.hidden = panel.dataset.comboPanel !== group;
         });
     }));
+
+    // Countdown 5 phút bắt đầu khi khách vào bước chọn đồ ăn.
+    // Deadline được lưu trong sessionStorage để reload trang không làm timer chạy lại từ đầu.
+    (() => {
+        const countdown = document.getElementById('combo-countdown');
+        const countdownBox = document.getElementById('combo-countdown-box');
+        if (!countdown) return;
+
+        const durationMs = 5 * 60 * 1000;
+        const timerKey = <?= json_encode('petacinema_combo_deadline_' . (int) $selectedShowtimeId . '_' . implode('_', $selectedSeatNumbersForCombo), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+        const timeoutUrl = <?= json_encode($timeoutReturnUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+        let deadline = 0;
+
+        try {
+            deadline = Number(sessionStorage.getItem(timerKey) || 0);
+        } catch (error) {
+            deadline = 0;
+        }
+
+        if (!deadline || deadline <= Date.now()) {
+            deadline = Date.now() + durationMs;
+            try {
+                sessionStorage.setItem(timerKey, String(deadline));
+            } catch (error) {}
+        }
+
+        let intervalId = null;
+        const clearTimerStorage = () => {
+            try {
+                sessionStorage.removeItem(timerKey);
+            } catch (error) {}
+        };
+
+        const expireComboStep = () => {
+            if (intervalId) clearInterval(intervalId);
+            clearTimerStorage();
+            window.location.replace(timeoutUrl);
+        };
+
+        const renderCountdown = () => {
+            const remainingMs = deadline - Date.now();
+            if (remainingMs <= 0) {
+                countdown.textContent = '00:00';
+                expireComboStep();
+                return;
+            }
+
+            const remainingSeconds = Math.ceil(remainingMs / 1000);
+            const minutes = Math.floor(remainingSeconds / 60);
+            const seconds = remainingSeconds % 60;
+            countdown.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            countdownBox?.classList.toggle('is-urgent', remainingSeconds <= 60);
+        };
+
+        document.getElementById('combo-back-to-seats')?.addEventListener('click', clearTimerStorage);
+        document.getElementById('combo-form')?.addEventListener('submit', () => {
+            clearTimerStorage();
+            const checkoutButton = document.getElementById('checkout-button');
+            if (checkoutButton) {
+                checkoutButton.disabled = true;
+                checkoutButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Đang tạo booking...';
+            }
+        });
+
+        renderCountdown();
+        intervalId = setInterval(renderCountdown, 500);
+    })();
+
     updateComboTotal();
 </script>

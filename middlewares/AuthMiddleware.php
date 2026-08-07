@@ -5,7 +5,7 @@ class AuthMiddleware
     public static function handle($action)
     {
         // Danh sách các route công khai không yêu cầu đăng nhập
-        $publicActions = ['/', 'login', 'register', 'loginPost', 'registerStore', 'movie_detail', 'booking_date'];
+        $publicActions = ['/', 'login', 'register', 'loginPost', 'registerStore', 'movie_detail', 'booking_date', 'vnpay_return', 'vnpay_ipn'];
         $isSelectingShowtime = $action === 'booking_date'
             && (int) ($_REQUEST['showtime_id'] ?? 0) > 0;
 

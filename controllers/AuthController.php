@@ -176,7 +176,7 @@ class AuthController
         );
         session_destroy();
         session_start();
-        header("Location: " . BASE_URL . "?action=/");
+        header("Location: " . BASE_URL);
         exit;
     }
 }

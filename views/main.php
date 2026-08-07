@@ -425,6 +425,17 @@
                                 TIN MỚI VÀ ƯU ĐÃI
                             </a>
                         </li>
+
+                        <?php
+                        $clientRole = $_SESSION['role'] ?? ($_SESSION['user']['role'] ?? null);
+                        if (isset($_SESSION['user']) && in_array($clientRole, ['user', 'client'], true)):
+                        ?>
+                            <li class="nav-item">
+                                <a class="nav-link nav-link-cinema text-uppercase<?= (($_GET['action'] ?? '') === 'my_tickets') ? ' active' : '' ?>" href="<?= BASE_URL ?>?action=my_tickets">
+                                    VÉ CỦA TÔI
+                                </a>
+                            </li>
+                        <?php endif; ?>
                     </ul>
 
                     <!-- User Account Actions -->
@@ -447,6 +458,23 @@
     <!-- Main Content Container -->
     <main class="py-4">
         <div class="container">
+            <?php
+            $clientFlash = get_flash();
+            if ($clientFlash):
+                $flashType = $clientFlash['type'] ?? 'info';
+                $bootstrapFlashType = match ($flashType) {
+                    'success' => 'success',
+                    'error', 'danger' => 'danger',
+                    'warning' => 'warning',
+                    default => 'info',
+                };
+            ?>
+                <div class="alert alert-<?= h($bootstrapFlashType) ?> alert-dismissible fade show shadow-sm" role="alert">
+                    <?= h($clientFlash['message'] ?? '') ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+                </div>
+            <?php endif; ?>
+
             <?php
             if (isset($view)) {
                 require_once PATH_VIEW . $view . '.php';

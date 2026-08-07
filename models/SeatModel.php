@@ -754,7 +754,13 @@ class SeatModel extends BaseModel
                         ON t.booking_id = b.id
 
                     WHERE b.showtime_id = :showtime_id
-                      AND b.status IN ('pending', 'paid')
+                      AND (
+                          b.status = 'paid'
+                          OR (
+                              b.status = 'pending'
+                              AND b.created_at > DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+                          )
+                      )
                 ) AS booked
                     ON booked.seat_id = s.id
 

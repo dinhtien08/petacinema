@@ -126,6 +126,60 @@ class BookingModel extends BaseModel
         return $stmt->fetchAll();
     }
 
+
+    /**
+     * Danh sách vé đã thanh toán của một khách hàng.
+     * Không trả room_name vì phía khách chỉ cần thấy phòng sau khi check-in/in vé tại quầy.
+     */
+    public function getPaidBookingsByUser(int $userId): array
+    {
+        $sql = "SELECT b.id,
+                       b.booking_code,
+                       b.total_amount,
+                       b.status,
+                       b.created_at,
+                       b.checkin_status,
+                       b.checked_in_at,
+                       b.checked_in_by,
+                       m.title AS movie_title,
+                       m.poster AS movie_poster,
+                       st.start_time,
+                       st.end_time,
+                       rt.name AS room_type_name,
+                       p.payment_method,
+                       p.transaction_code,
+                       p.status AS payment_status,
+                       p.payment_time,
+                       GROUP_CONCAT(
+                           DISTINCT se.seat_number
+                           ORDER BY se.row_char, se.col_num
+                           SEPARATOR ', '
+                       ) AS seat_numbers,
+                       COUNT(DISTINCT t.id) AS ticket_count,
+                       COALESCE(SUM(t.price), 0) AS ticket_total
+                FROM bookings b
+                INNER JOIN showtimes st ON st.id = b.showtime_id
+                INNER JOIN movies m ON m.id = st.movie_id
+                INNER JOIN rooms r ON r.id = st.room_id
+                INNER JOIN room_types rt ON rt.id = r.room_type_id
+                LEFT JOIN payments p ON p.id = b.payment_id
+                LEFT JOIN tickets t ON t.booking_id = b.id
+                LEFT JOIN seats se ON se.id = t.seat_id
+                WHERE b.user_id = :user_id
+                  AND b.status = 'paid'
+                GROUP BY b.id, b.booking_code, b.total_amount, b.status, b.created_at,
+                         b.checkin_status, b.checked_in_at, b.checked_in_by,
+                         m.title, m.poster, st.start_time, st.end_time, rt.name,
+                         p.payment_method, p.transaction_code, p.status, p.payment_time
+                ORDER BY b.created_at DESC, b.id DESC";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     // Danh sách suất chiếu kèm tên phim + phòng, dùng cho dropdown chọn suất chiếu
     public function getShowtimeOptions()
     {
@@ -183,7 +237,9 @@ class BookingModel extends BaseModel
 
             $ticketTotal = 0;
             foreach ($seats as $seat) {
-                $ticketTotal += (float) $showtime['base_price'] + (float) $seat['surcharge'];
+                $ticketTotal += (float) $showtime['base_price']
+                    + (float) $showtime['room_price_modifier']
+                    + (float) $seat['surcharge'];
             }
 
             $foodTotal = 0;
@@ -210,15 +266,15 @@ class BookingModel extends BaseModel
             $ticketSql = "INSERT INTO tickets
                             (booking_id, seat_id, ticket_code, price)
                           VALUES
-                            (:booking_id, :seat_id, :ticket_code, :price)";
+                            (:booking_id, :seat_id, NULL, :price)";
             $ticketStmt = $this->pdo->prepare($ticketSql);
-            foreach ($seats as $index => $seat) {
-                $ticketPrice = (float) $showtime['base_price'] + (float) $seat['surcharge'];
-                $ticketCode = $data['booking_code'] . '-T' . str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT);
+            foreach ($seats as $seat) {
+                $ticketPrice = (float) $showtime['base_price']
+                    + (float) $showtime['room_price_modifier']
+                    + (float) $seat['surcharge'];
                 $ticketStmt->execute([
                     ':booking_id' => $bookingId,
                     ':seat_id' => (int) $seat['id'],
-                    ':ticket_code' => $ticketCode,
                     ':price' => $ticketPrice,
                 ]);
             }
@@ -236,6 +292,12 @@ class BookingModel extends BaseModel
                         ':quantity' => (int) $food['quantity'],
                         ':price_at_booking' => (float) $food['price'],
                     ]);
+                }
+
+                // Booking cancelled không chiếm tồn kho. Booking pending/paid thì giữ/trừ kho.
+                // Nếu transaction phía dưới lỗi thì toàn bộ thay đổi sẽ rollback.
+                if (($data['status'] ?? 'pending') !== 'cancelled') {
+                    $this->decreaseFoodStock($foods);
                 }
             }
 
@@ -286,11 +348,77 @@ class BookingModel extends BaseModel
         return $rows;
     }
 
+    /**
+     * Trừ/giữ tồn kho đồ ăn trong transaction hiện tại.
+     * getFoodsForBooking() đã SELECT ... FOR UPDATE và kiểm tra đủ tồn kho trước đó.
+     */
+    private function decreaseFoodStock(array $foods): void
+    {
+        if (empty($foods)) {
+            return;
+        }
+
+        $stmt = $this->pdo->prepare(
+            "UPDATE food_variants
+             SET stock = stock - :quantity
+             WHERE id = :id
+               AND stock >= :quantity_check"
+        );
+
+        foreach ($foods as $food) {
+            $quantity = (int) ($food['quantity'] ?? 0);
+            $variantId = (int) ($food['id'] ?? 0);
+
+            if ($variantId <= 0 || $quantity <= 0) {
+                throw new InvalidArgumentException('Thông tin tồn kho đồ ăn không hợp lệ.');
+            }
+
+            $stmt->execute([
+                ':quantity' => $quantity,
+                ':id' => $variantId,
+                ':quantity_check' => $quantity,
+            ]);
+
+            if ($stmt->rowCount() !== 1) {
+                throw new RuntimeException('Tồn kho đồ ăn vừa thay đổi. Vui lòng chọn lại món.');
+            }
+        }
+    }
+
+    /**
+     * Hoàn lại tồn kho của các booking bị huỷ/hết hạn.
+     * Chỉ được gọi khi các booking đó vẫn đang ở trạng thái pending và đã được lock.
+     */
+    private function restoreFoodStockForBookings(array $bookingIds): void
+    {
+        $bookingIds = array_values(array_unique(array_filter(array_map('intval', $bookingIds))));
+        if (empty($bookingIds)) {
+            return;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($bookingIds), '?'));
+
+        $stmt = $this->pdo->prepare(
+            "UPDATE food_variants fv
+             INNER JOIN (
+                 SELECT fo.food_variant_id, SUM(fo.quantity) AS restore_quantity
+                 FROM food_orders fo
+                 WHERE fo.booking_id IN ($placeholders)
+                 GROUP BY fo.food_variant_id
+             ) x ON x.food_variant_id = fv.id
+             SET fv.stock = fv.stock + x.restore_quantity"
+        );
+        $stmt->execute($bookingIds);
+    }
+
     private function getShowtimeForBooking(int $showtimeId)
     {
-        $sql = "SELECT id, room_id, base_price
-                FROM showtimes
-                WHERE id = :id
+        $sql = "SELECT s.id, s.room_id, s.base_price, s.start_time,
+                       rt.price_modifier AS room_price_modifier
+                FROM showtimes s
+                INNER JOIN rooms r ON r.id = s.room_id
+                INNER JOIN room_types rt ON rt.id = r.room_type_id
+                WHERE s.id = :id
                 LIMIT 1";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([':id' => $showtimeId]);
@@ -314,7 +442,13 @@ class BookingModel extends BaseModel
                       JOIN bookings b ON b.id = t.booking_id
                       WHERE t.seat_id = s.id
                         AND b.showtime_id = ?
-                        AND b.status IN ('pending', 'paid')
+                        AND (
+                            b.status = 'paid'
+                            OR (
+                                b.status = 'pending'
+                                AND b.created_at > DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+                            )
+                        )
                   )
                 FOR UPDATE";
 
@@ -352,6 +486,428 @@ class BookingModel extends BaseModel
             if ($selectedCount !== $totalInGroup) {
                 throw new InvalidArgumentException('Ghế Couple phải chọn đủ cả cặp.');
             }
+        }
+    }
+
+
+    /**
+     * Tạo booking pending khi khách bấm "Thanh toán".
+     * Việc insert tickets ngay trong transaction chính là cơ chế giữ ghế.
+     */
+    public function createPendingCheckout(array $data): array
+    {
+        $showtimeId = (int) ($data['showtime_id'] ?? 0);
+        $userId = (int) ($data['user_id'] ?? 0);
+        $seatNumbers = array_values(array_unique(array_filter(array_map(
+            static fn($seat) => strtoupper(trim((string) $seat)),
+            $data['seat_numbers'] ?? []
+        ))));
+        $foodQuantities = $data['food_quantities'] ?? [];
+
+        if ($userId <= 0 || $showtimeId <= 0 || empty($seatNumbers)) {
+            throw new InvalidArgumentException('Thông tin đặt vé không hợp lệ.');
+        }
+
+        try {
+            $this->pdo->beginTransaction();
+
+            $this->expirePendingBookingsInCurrentTransaction();
+
+            $showtime = $this->getShowtimeForBooking($showtimeId);
+            if (!$showtime) {
+                throw new InvalidArgumentException('Suất chiếu không tồn tại.');
+            }
+
+            if (strtotime((string) $showtime['start_time']) <= time()) {
+                throw new InvalidArgumentException('Suất chiếu đã bắt đầu, không thể đặt vé.');
+            }
+
+            $seats = $this->getSeatsForBooking(
+                $showtimeId,
+                (int) $showtime['room_id'],
+                $seatNumbers
+            );
+
+            if (count($seats) !== count($seatNumbers)) {
+                throw new InvalidArgumentException('Một hoặc nhiều ghế vừa được khách khác giữ/đặt. Vui lòng chọn lại.');
+            }
+
+            $this->validateCoupleSeats($seats);
+            $foods = $this->getFoodsForBooking($foodQuantities);
+
+            $ticketTotal = 0.0;
+            foreach ($seats as $seat) {
+                $ticketTotal += (float) $showtime['base_price']
+                    + (float) $showtime['room_price_modifier']
+                    + (float) $seat['surcharge'];
+            }
+
+            $foodTotal = 0.0;
+            foreach ($foods as $food) {
+                $foodTotal += (float) $food['price'] * (int) $food['quantity'];
+            }
+
+            $totalAmount = $ticketTotal + $foodTotal;
+
+            $bookingStmt = $this->pdo->prepare(
+                "INSERT INTO bookings
+                    (booking_code, user_id, showtime_id, payment_id, total_amount, status)
+                 VALUES
+                    (NULL, :user_id, :showtime_id, NULL, :total_amount, 'pending')"
+            );
+            $bookingStmt->execute([
+                ':user_id' => $userId,
+                ':showtime_id' => $showtimeId,
+                ':total_amount' => $totalAmount,
+            ]);
+
+            $bookingId = (int) $this->pdo->lastInsertId();
+            $bookingCode = 'PET' . date('Ymd') . str_pad((string) $bookingId, 4, '0', STR_PAD_LEFT);
+
+            $codeStmt = $this->pdo->prepare(
+                "UPDATE bookings SET booking_code = :booking_code WHERE id = :id"
+            );
+            $codeStmt->execute([
+                ':booking_code' => $bookingCode,
+                ':id' => $bookingId,
+            ]);
+
+            $ticketStmt = $this->pdo->prepare(
+                "INSERT INTO tickets (booking_id, seat_id, ticket_code, price)
+                 VALUES (:booking_id, :seat_id, NULL, :price)"
+            );
+
+            foreach ($seats as $seat) {
+                $ticketPrice = (float) $showtime['base_price']
+                    + (float) $showtime['room_price_modifier']
+                    + (float) $seat['surcharge'];
+
+                $ticketStmt->execute([
+                    ':booking_id' => $bookingId,
+                    ':seat_id' => (int) $seat['id'],
+                    ':price' => $ticketPrice,
+                ]);
+            }
+
+            if (!empty($foods)) {
+                $foodStmt = $this->pdo->prepare(
+                    "INSERT INTO food_orders
+                        (booking_id, food_variant_id, quantity, price_at_booking)
+                     VALUES
+                        (:booking_id, :food_variant_id, :quantity, :price_at_booking)"
+                );
+
+                foreach ($foods as $food) {
+                    $foodStmt->execute([
+                        ':booking_id' => $bookingId,
+                        ':food_variant_id' => (int) $food['id'],
+                        ':quantity' => (int) $food['quantity'],
+                        ':price_at_booking' => (float) $food['price'],
+                    ]);
+                }
+
+                // Booking pending đã giữ ghế thì đồng thời giữ luôn tồn kho đồ ăn.
+                $this->decreaseFoodStock($foods);
+            }
+
+            $paymentStmt = $this->pdo->prepare(
+                "INSERT INTO payments
+                    (payment_method, transaction_code, amount, status, payment_time)
+                 VALUES
+                    ('vnpay', NULL, :amount, 'pending', NULL)"
+            );
+            $paymentStmt->execute([':amount' => $totalAmount]);
+            $paymentId = (int) $this->pdo->lastInsertId();
+
+            $linkPaymentStmt = $this->pdo->prepare(
+                "UPDATE bookings SET payment_id = :payment_id WHERE id = :id"
+            );
+            $linkPaymentStmt->execute([
+                ':payment_id' => $paymentId,
+                ':id' => $bookingId,
+            ]);
+
+            $createdStmt = $this->pdo->prepare(
+                "SELECT id, booking_code, total_amount, created_at
+                 FROM bookings
+                 WHERE id = :id
+                 LIMIT 1"
+            );
+            $createdStmt->execute([':id' => $bookingId]);
+            $booking = $createdStmt->fetch(PDO::FETCH_ASSOC);
+
+            $this->pdo->commit();
+
+            return $booking ?: [
+                'id' => $bookingId,
+                'booking_code' => $bookingCode,
+                'total_amount' => $totalAmount,
+                'created_at' => date('Y-m-d H:i:s'),
+            ];
+        } catch (Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    public function expirePendingBookings(): int
+    {
+        try {
+            $this->pdo->beginTransaction();
+            $count = $this->expirePendingBookingsInCurrentTransaction();
+            $this->pdo->commit();
+            return $count;
+        } catch (Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    private function expirePendingBookingsInCurrentTransaction(): int
+    {
+        // Lock chính xác các booking pending đã quá 5 phút.
+        // Nhờ lock này, payment success và timeout không thể xử lý cùng một booking đồng thời.
+        $expiredStmt = $this->pdo->prepare(
+            "SELECT id
+             FROM bookings
+             WHERE status = 'pending'
+               AND created_at <= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+             FOR UPDATE"
+        );
+        $expiredStmt->execute();
+        $bookingIds = array_map('intval', $expiredStmt->fetchAll(PDO::FETCH_COLUMN));
+
+        if (empty($bookingIds)) {
+            return 0;
+        }
+
+        // Booking pending đã trừ stock khi bắt đầu checkout.
+        // Khi hết hạn phải hoàn lại đúng một lần trước khi chuyển sang cancelled.
+        $this->restoreFoodStockForBookings($bookingIds);
+
+        $placeholders = implode(',', array_fill(0, count($bookingIds), '?'));
+
+        $paymentStmt = $this->pdo->prepare(
+            "UPDATE payments p
+             INNER JOIN bookings b ON b.payment_id = p.id
+             SET p.status = 'failed',
+                 p.payment_time = COALESCE(p.payment_time, NOW())
+             WHERE b.id IN ($placeholders)
+               AND p.status = 'pending'"
+        );
+        $paymentStmt->execute($bookingIds);
+
+        $bookingStmt = $this->pdo->prepare(
+            "UPDATE bookings
+             SET status = 'cancelled'
+             WHERE id IN ($placeholders)
+               AND status = 'pending'"
+        );
+        $bookingStmt->execute($bookingIds);
+
+        return $bookingStmt->rowCount();
+    }
+
+    public function getCheckoutByBookingCode(string $bookingCode): ?array
+    {
+        $sql = "SELECT b.id,
+                       b.booking_code,
+                       b.user_id,
+                       b.showtime_id,
+                       b.payment_id,
+                       b.total_amount,
+                       b.status,
+                       b.created_at,
+                       p.status AS payment_status,
+                       p.transaction_code,
+                       p.payment_time,
+                       s.movie_id,
+                       s.start_time,
+                       m.title AS movie_title,
+                       rt.name AS room_type_name,
+                       GROUP_CONCAT(
+                           se.seat_number
+                           ORDER BY se.row_char, se.col_num
+                           SEPARATOR ', '
+                       ) AS seat_numbers
+                FROM bookings b
+                INNER JOIN showtimes s ON s.id = b.showtime_id
+                INNER JOIN movies m ON m.id = s.movie_id
+                INNER JOIN rooms r ON r.id = s.room_id
+                INNER JOIN room_types rt ON rt.id = r.room_type_id
+                LEFT JOIN payments p ON p.id = b.payment_id
+                LEFT JOIN tickets t ON t.booking_id = b.id
+                LEFT JOIN seats se ON se.id = t.seat_id
+                WHERE b.booking_code = :booking_code
+                GROUP BY b.id, b.booking_code, b.user_id, b.showtime_id, b.payment_id,
+                         b.total_amount, b.status, b.created_at, p.status, p.transaction_code,
+                         p.payment_time, s.movie_id, s.start_time, m.title, rt.name
+                LIMIT 1";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':booking_code' => $bookingCode]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $row ?: null;
+    }
+
+    public function completeVnpayPayment(
+        string $bookingCode,
+        float $returnedAmount,
+        string $transactionCode,
+        ?string $payDate
+    ): array {
+        try {
+            $this->pdo->beginTransaction();
+
+            $stmt = $this->pdo->prepare(
+                "SELECT b.*, p.status AS payment_status
+                 FROM bookings b
+                 LEFT JOIN payments p ON p.id = b.payment_id
+                 WHERE b.booking_code = :booking_code
+                 LIMIT 1
+                 FOR UPDATE"
+            );
+            $stmt->execute([':booking_code' => $bookingCode]);
+            $booking = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$booking) {
+                throw new RuntimeException('Không tìm thấy booking.');
+            }
+
+            if (abs((float) $booking['total_amount'] - $returnedAmount) > 0.01) {
+                throw new RuntimeException('Số tiền VNPAY trả về không khớp booking.');
+            }
+
+            if ($booking['status'] === 'paid') {
+                $this->pdo->commit();
+                return ['success' => true, 'message' => 'Booking đã được thanh toán trước đó.'];
+            }
+
+            if ($booking['status'] !== 'pending') {
+                throw new RuntimeException('Booking đã hết hạn hoặc đã bị hủy.');
+            }
+
+            $createdAt = new DateTimeImmutable((string) $booking['created_at'], new DateTimeZone('Asia/Ho_Chi_Minh'));
+            $deadline = $createdAt->modify('+5 minutes');
+
+            $paidAt = $payDate
+                ? DateTimeImmutable::createFromFormat('YmdHis', $payDate, new DateTimeZone('Asia/Ho_Chi_Minh'))
+                : new DateTimeImmutable('now', new DateTimeZone('Asia/Ho_Chi_Minh'));
+
+            if (!$paidAt || $paidAt > $deadline) {
+                throw new RuntimeException('Giao dịch đã vượt quá thời gian thanh toán 5 phút.');
+            }
+
+            $paymentStmt = $this->pdo->prepare(
+                "UPDATE payments
+                 SET transaction_code = :transaction_code,
+                     status = 'completed',
+                     payment_time = :payment_time
+                 WHERE id = :payment_id"
+            );
+            $paymentStmt->execute([
+                ':transaction_code' => $transactionCode !== '' ? $transactionCode : null,
+                ':payment_time' => $paidAt->format('Y-m-d H:i:s'),
+                ':payment_id' => (int) $booking['payment_id'],
+            ]);
+
+            $bookingStmt = $this->pdo->prepare(
+                "UPDATE bookings SET status = 'paid' WHERE id = :id"
+            );
+            $bookingStmt->execute([':id' => (int) $booking['id']]);
+
+            $this->pdo->commit();
+            return ['success' => true, 'message' => 'Thanh toán thành công.'];
+        } catch (Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    public function cancelPendingCheckout(
+        string $bookingCode,
+        string $transactionCode = '',
+        ?string $payDate = null
+    ): bool {
+        try {
+            $this->pdo->beginTransaction();
+
+            $stmt = $this->pdo->prepare(
+                "SELECT b.id, b.payment_id, b.status
+                 FROM bookings b
+                 WHERE b.booking_code = :booking_code
+                 LIMIT 1
+                 FOR UPDATE"
+            );
+            $stmt->execute([':booking_code' => $bookingCode]);
+            $booking = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$booking) {
+                $this->pdo->rollBack();
+                return false;
+            }
+
+            if ($booking['status'] === 'paid') {
+                $this->pdo->commit();
+                return false;
+            }
+
+            if ($booking['status'] === 'pending') {
+                // Thanh toán thất bại/bị huỷ: nhả phần tồn kho đã giữ.
+                // Chỉ chạy khi status còn pending nên gọi lại lần 2 sẽ không cộng stock thêm.
+                $this->restoreFoodStockForBookings([(int) $booking['id']]);
+
+                $bookingStmt = $this->pdo->prepare(
+                    "UPDATE bookings SET status = 'cancelled' WHERE id = :id AND status = 'pending'"
+                );
+                $bookingStmt->execute([':id' => (int) $booking['id']]);
+            }
+
+            if (!empty($booking['payment_id'])) {
+                $paymentTime = null;
+                if ($payDate) {
+                    $parsed = DateTimeImmutable::createFromFormat(
+                        'YmdHis',
+                        $payDate,
+                        new DateTimeZone('Asia/Ho_Chi_Minh')
+                    );
+                    if ($parsed) {
+                        $paymentTime = $parsed->format('Y-m-d H:i:s');
+                    }
+                }
+
+                $paymentStmt = $this->pdo->prepare(
+                    "UPDATE payments
+                     SET transaction_code = CASE
+                            WHEN :transaction_code_value = '' THEN transaction_code
+                            ELSE :transaction_code_set
+                         END,
+                         status = CASE WHEN status = 'completed' THEN status ELSE 'failed' END,
+                         payment_time = COALESCE(:payment_time, payment_time, NOW())
+                     WHERE id = :payment_id"
+                );
+                $paymentStmt->execute([
+                    ':transaction_code_value' => $transactionCode,
+                    ':transaction_code_set' => $transactionCode !== '' ? $transactionCode : null,
+                    ':payment_time' => $paymentTime,
+                    ':payment_id' => (int) $booking['payment_id'],
+                ]);
+            }
+
+            $this->pdo->commit();
+            return true;
+        } catch (Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            return false;
         }
     }
 

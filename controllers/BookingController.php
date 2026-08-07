@@ -126,6 +126,114 @@ class BookingController
         exit;
     }
 
+
+    /**
+     * Vé của tôi: chỉ hiển thị các booking đã thanh toán của khách đang đăng nhập.
+     */
+    public function myTickets()
+    {
+        $userId = (int) ($_SESSION['user_id'] ?? 0);
+        $role = $_SESSION['role'] ?? ($_SESSION['user']['role'] ?? 'user');
+
+        if ($userId <= 0) {
+            header('Location: ' . BASE_URL . '?action=login');
+            exit;
+        }
+
+        if (!in_array($role, ['user', 'client'], true)) {
+            header('Location: ' . BASE_URL);
+            exit;
+        }
+
+        $bookingModel = new BookingModel();
+        $bookingModel->expirePendingBookings();
+        $bookings = $bookingModel->getPaidBookingsByUser($userId);
+
+        foreach ($bookings as &$booking) {
+            $booking['foods'] = $bookingModel->getBookingFoodOrders((int) $booking['id']);
+        }
+        unset($booking);
+
+        $title = 'Vé của tôi | Petacinema';
+        $view = 'my_tickets';
+        require_once PATH_VIEW . 'main.php';
+    }
+
+
+    /**
+     * Client checkout: tạo booking pending + tickets để giữ ghế, sau đó sang VNPAY Sandbox.
+     */
+    public function checkout()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: ' . BASE_URL);
+            exit;
+        }
+
+        $userId = (int) ($_SESSION['user_id'] ?? 0);
+        $movieId = (int) ($_POST['movie_id'] ?? 0);
+        $showtimeId = (int) ($_POST['showtime_id'] ?? 0);
+        $selectedDate = trim((string) ($_POST['date'] ?? ''));
+        $seatNumbersRaw = strtoupper(trim((string) ($_POST['seat_numbers'] ?? '')));
+        $seatNumbers = $this->parseSeatNumbers($seatNumbersRaw);
+        $foodQuantities = $this->normalizeFoodQuantities($_POST['food_quantities'] ?? []);
+
+        $backParams = [
+            'action' => 'booking_date',
+            'movie_id' => $movieId,
+            'date' => $selectedDate,
+            'showtime_id' => $showtimeId,
+            'selected_seats' => implode(',', $seatNumbers),
+        ];
+        $backUrl = BASE_URL . '?' . http_build_query($backParams);
+
+        if ($userId <= 0) {
+            $_SESSION['booking_return_url'] = $backUrl;
+            set_flash('error', 'Vui lòng đăng nhập để tiếp tục thanh toán.');
+            header('Location: ' . BASE_URL . '?action=login');
+            exit;
+        }
+
+        if ($movieId <= 0 || $showtimeId <= 0 || empty($seatNumbers)) {
+            set_flash('error', 'Thông tin đặt vé không hợp lệ. Vui lòng chọn lại suất và ghế.');
+            header('Location: ' . BASE_URL);
+            exit;
+        }
+
+        if (!VnpayService::isConfigured()) {
+            set_flash('error', 'VNPAY Sandbox chưa được cấu hình. Hãy điền VNPAY_TMN_CODE và VNPAY_HASH_SECRET trong configs/env.php.');
+            header('Location: ' . $backUrl);
+            exit;
+        }
+
+        $bookingModel = new BookingModel();
+
+        try {
+            $booking = $bookingModel->createPendingCheckout([
+                'user_id' => $userId,
+                'showtime_id' => $showtimeId,
+                'seat_numbers' => $seatNumbers,
+                'food_quantities' => $foodQuantities,
+            ]);
+
+            // Từ thời điểm booking pending được tạo, tickets đã giữ ghế trong tối đa 5 phút.
+            $_SESSION['active_payment_booking_code'] = $booking['booking_code'];
+
+            $paymentUrl = VnpayService::createPaymentUrl($booking);
+            header('Location: ' . $paymentUrl);
+            exit;
+        } catch (InvalidArgumentException $e) {
+            set_flash('error', $e->getMessage());
+            header('Location: ' . $backUrl);
+            exit;
+        } catch (Throwable $e) {
+            set_flash('error', 'Không thể tạo booking thanh toán: ' . $e->getMessage());
+            header('Location: ' . $backUrl);
+            exit;
+        }
+    }
+
+
     private function validate(array $data): array
     {
         $errors = [];

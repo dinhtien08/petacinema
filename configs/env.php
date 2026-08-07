@@ -34,3 +34,17 @@ define('DB_OPTIONS', [
 ]);
 define('SHOWTIME_CLEANING_TIME', 20);
 date_default_timezone_set('Asia/Ho_Chi_Minh');
+
+// VNPay Sandbox
+define('VNPAY_TMN_CODE', 'VKA0CKXS');
+define('VNPAY_HASH_SECRET', 'GVDIQPPOGWDJFEUGUQLECZCSEZSYCOIW');
+define(
+    'VNPAY_PAYMENT_URL',
+    'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html'
+);
+define(
+    'VNPAY_RETURN_URL',
+    BASE_URL . 'vnpay_return.php'
+);
+
+define('VNPAY_PAYMENT_TIMEOUT_MINUTES', 5);
