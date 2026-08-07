@@ -91,7 +91,6 @@ class BookingModel extends BaseModel
     public function getBookingTickets($bookingId)
     {
         $sql = "SELECT t.id AS ticket_id,
-                       t.ticket_code,
                        t.price AS ticket_price,
                        s.seat_number,
                        s.row_char,
@@ -264,9 +263,9 @@ class BookingModel extends BaseModel
             $bookingId = (int) $this->pdo->lastInsertId();
 
             $ticketSql = "INSERT INTO tickets
-                            (booking_id, seat_id, ticket_code, price)
+                            (booking_id, seat_id, price)
                           VALUES
-                            (:booking_id, :seat_id, NULL, :price)";
+                            (:booking_id, :seat_id, :price)";
             $ticketStmt = $this->pdo->prepare($ticketSql);
             foreach ($seats as $seat) {
                 $ticketPrice = (float) $showtime['base_price']
@@ -573,8 +572,8 @@ class BookingModel extends BaseModel
             ]);
 
             $ticketStmt = $this->pdo->prepare(
-                "INSERT INTO tickets (booking_id, seat_id, ticket_code, price)
-                 VALUES (:booking_id, :seat_id, NULL, :price)"
+                "INSERT INTO tickets (booking_id, seat_id, price)
+                 VALUES (:booking_id, :seat_id, :price)"
             );
 
             foreach ($seats as $seat) {

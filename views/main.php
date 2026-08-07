@@ -407,7 +407,7 @@
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0 gap-lg-2 gap-1 align-items-lg-center">
                         <li class="nav-item">
                             <a class="nav-link nav-link-cinema text-uppercase<?= (($_GET['client_page'] ?? '') === 'showtimes') ? ' active' : '' ?>" href="<?= BASE_URL ?>?client_page=showtimes">
-                                LỊCH CHIẾU THEO RẠP
+                                LỊCH CHIẾU
                             </a>
                         </li>
                         <li class="nav-item">
