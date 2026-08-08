@@ -271,7 +271,7 @@
                     </div>
 
                     <div class="ticket-code-wrapper" style="width: 100%; margin-top: 2mm;">
-                        <div class="ticket-code-display"><?= htmlspecialchars($t['ticket_code'] ?? '-') ?></div>
+                        <div class="ticket-code-display"><?= htmlspecialchars($t['booking_code'] ?? '-') ?></div>
                     </div>
 
                     <div style="font-size: 8px; text-align: center; color: #555; width: 100%; border-top: 1px dashed #ccc; padding-top: 1mm;">

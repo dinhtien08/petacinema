@@ -365,6 +365,10 @@ foreach ($displayBookings as $booking) {
                             Trạng thái
                         </th>
 
+                        <th>
+                            Check-in
+                        </th>
+
                         <th width="100">
                             Chi tiết
                         </th>
@@ -485,6 +489,18 @@ foreach ($displayBookings as $booking) {
                                 </td>
 
                                 <td class="text-center">
+                                    <?php if (($booking['checkin_status'] ?? 'pending') === 'checked_in'): ?>
+                                        <span class="badge text-bg-success px-3 py-2">
+                                            <i class="bi bi-person-check-fill me-1"></i> Đã check-in
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="badge text-bg-light border text-dark px-3 py-2">
+                                            <i class="bi bi-person-dash me-1"></i> Chưa check-in
+                                        </span>
+                                    <?php endif; ?>
+                                </td>
+
+                                <td class="text-center">
 
                                     
                                         <a href="<?= BASE_URL ?>?action=staff_booking_show&id=<?= (int)$booking['id'] ?>"
@@ -506,7 +522,7 @@ foreach ($displayBookings as $booking) {
                         <tr>
 
                             <td
-                                colspan="9"
+                                colspan="10"
                                 class="text-center py-5">
 
                                 <div class="mb-3">
