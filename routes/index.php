@@ -150,6 +150,16 @@ match ($action) {
     'staff_booking_list'  => (new StaffBookingController)->list(),
     'staff_booking_show'  => (new StaffBookingController)->show(),
     'staff_booking_detail'=> (new StaffBookingController)->show(),
+    
+    // Check-in and Ticket Printing
+    'staff_checkin'             => (new StaffBookingController)->checkinScanView(),
+    'staff_checkin_process'     => (new StaffBookingController)->checkinProcess(),
+    'staff_ticket_print'        => (new StaffBookingController)->printTicket(),
+    'staff_ticket_checkin'      => (new StaffBookingController)->checkInTicket(),
+    'staff_booking_checkin_all' => (new StaffBookingController)->checkInBookingAll(),
+    'staff_booking_checkin'     => (new StaffBookingController)->bookingCheckIn(),
+    'staff_food_delivery_confirm' => (new StaffBookingController)->confirmFoodDelivery(),
+    'staff_food_delivery'       => (new StaffBookingController)->foodDeliveryView(),
 
     // Payment
     'staff_payment_list'   => (new StaffPaymentController)->payment_list(),

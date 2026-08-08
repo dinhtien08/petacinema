@@ -1,9 +1,9 @@
+<!-- Tiêu đề trang -->
 <div class="d-flex align-items-center justify-content-between mb-4">
     <div>
         <h4 class="fw-bold mb-1">
             Chi tiết đơn đặt vé: <?= htmlspecialchars($booking['booking_code'] ?? '') ?>
         </h4>
-
         <p class="text-muted mb-0">
             Thông tin chi tiết đơn đặt vé của khách hàng
         </p>
@@ -13,6 +13,94 @@
         <i class="bi bi-arrow-left me-1"></i>
         Quay lại danh sách
     </a>
+</div>
+
+<!-- Thông báo Flash -->
+<?php if (!empty($flash)): ?>
+    <div class="alert alert-<?= $flash['type'] === 'success' ? 'success' : 'danger' ?> alert-dismissible fade show mb-4" role="alert">
+        <i class="bi <?= $flash['type'] === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill' ?> me-2"></i>
+        <?= htmlspecialchars($flash['message']) ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+    </div>
+<?php endif; ?>
+
+<!-- 1. Staff Actions Panel -->
+<?php
+// Kiểm tra trạng thái check-in của toàn bộ vé
+$allCheckedIn = !empty($tickets);
+$checkInTime = null;
+$checkedInBy = null;
+foreach ($tickets as $t) {
+    if (($t['checkin_status'] ?? 'pending') !== 'checked_in') {
+        $allCheckedIn = false;
+    } else {
+        if (empty($checkInTime) && !empty($t['checked_in_at'])) {
+            $checkInTime = date('d/m/Y H:i:s', strtotime($t['checked_in_at']));
+            $checkedInBy = $t['checked_in_by_name'];
+        }
+    }
+}
+
+// Kiểm tra trạng thái giao đồ ăn
+$hasFoodOrders = !empty($foodOrders);
+$allFoodDelivered = $hasFoodOrders;
+$deliveryTime = null;
+$deliveredBy = null;
+foreach ($foodOrders as $fo) {
+    if (($fo['delivery_status'] ?? 'pending') !== 'delivered') {
+        $allFoodDelivered = false;
+    } else {
+        if (empty($deliveryTime) && !empty($fo['delivered_at'])) {
+            $deliveryTime = date('d/m/Y H:i:s', strtotime($fo['delivered_at']));
+            $deliveredBy = $fo['delivered_by_name'];
+        }
+    }
+}
+?>
+<div class="card shadow-sm border-0 mb-4 bg-light">
+    <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3 py-3">
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-primary fs-6 px-3 py-2">HÀNH ĐỘNG NHÂN VIÊN</span>
+        </div>
+        
+        <div class="d-flex flex-wrap gap-3">
+            <!-- Action 1: Check-in & Print Tickets -->
+            <div class="d-flex flex-column align-items-end">
+                <?php if (!$allCheckedIn): ?>
+                    <a href="?action=staff_booking_checkin&booking_id=<?= (int)$booking['id'] ?>" class="btn btn-success px-4 py-2">
+                        <i class="bi bi-printer me-2"></i> Check-in & Print Tickets
+                    </a>
+                <?php else: ?>
+                    <button class="btn btn-success px-4 py-2" disabled>
+                        <i class="bi bi-check-circle-fill me-2"></i> ✓ Checked In
+                    </button>
+                    <div class="text-end text-muted mt-1" style="font-size: 0.75rem;">
+                        <div>Thời gian: <?= $checkInTime ?></div>
+                        <div>Thực hiện: <?= htmlspecialchars($checkedInBy ?? '-') ?></div>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <!-- Action 2: Confirm Food Delivered (Only shown if food orders exist) -->
+            <?php if ($hasFoodOrders): ?>
+                <div class="d-flex flex-column align-items-end border-start ps-3">
+                    <?php if (!$allFoodDelivered): ?>
+                        <a href="?action=staff_food_delivery_confirm&booking_id=<?= (int)$booking['id'] ?>" class="btn btn-warning px-4 py-2 text-dark">
+                            <i class="bi bi-box-seam me-2"></i> Confirm Food Delivered
+                        </a>
+                    <?php else: ?>
+                        <button class="btn btn-warning px-4 py-2 text-dark" disabled>
+                            <i class="bi bi-check-circle-fill me-2"></i> ✓ Food Delivered
+                        </button>
+                        <div class="text-end text-muted mt-1" style="font-size: 0.75rem;">
+                            <div>Thời gian: <?= $deliveryTime ?></div>
+                            <div>Thực hiện: <?= htmlspecialchars($deliveredBy ?? '-') ?></div>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
 </div>
 
 <div class="row g-4 mb-4">
@@ -122,7 +210,7 @@
     </div>
 </div>
 
-<!-- Booked Seats Table -->
+<!-- Booked Seats Table (View-Only) -->
 <div class="card shadow-sm border-0 mb-4">
     <div class="card-header bg-white py-3">
         <h5 class="card-title mb-0 fw-bold">
@@ -138,7 +226,10 @@
                         <th>Mã vé</th>
                         <th>Số ghế</th>
                         <th>Loại ghế</th>
-                        <th class="text-end pe-4">Giá vé</th>
+                        <th>Giá vé</th>
+                        <th>Trạng thái</th>
+                        <th>Thời gian quét</th>
+                        <th class="pe-4">Nhân viên quét</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -162,14 +253,27 @@
                                     ?>
                                     <span class="badge <?= $seatTypeBadge ?>"><?= htmlspecialchars($ticket['seat_type_name'] ?? 'Standard') ?></span>
                                 </td>
-                                <td class="text-end pe-4 fw-semibold">
+                                <td class="fw-semibold">
                                     <?= number_format((float)$ticket['ticket_price'], 0, ',', '.') ?> đ
+                                </td>
+                                <td>
+                                    <?php if (($ticket['checkin_status'] ?? 'pending') === 'checked_in'): ?>
+                                        <span class="badge bg-success">Đã check-in</span>
+                                    <?php else: ?>
+                                        <span class="badge bg-warning text-dark">Chờ quét</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <?= !empty($ticket['checked_in_at']) ? date('d/m/Y H:i:s', strtotime($ticket['checked_in_at'])) : '-' ?>
+                                </td>
+                                <td class="pe-4">
+                                    <?= htmlspecialchars($ticket['checked_in_by_name'] ?? '-') ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="5" class="text-center py-4 text-muted">
+                            <td colspan="8" class="text-center py-4 text-muted">
                                 Chưa có thông tin ghế đặt cho đơn hàng này.
                             </td>
                         </tr>
@@ -180,7 +284,7 @@
     </div>
 </div>
 
-<!-- Food Orders Table -->
+<!-- Food Orders Table (View-Only) -->
 <div class="card shadow-sm border-0 mb-4">
     <div class="card-header bg-white py-3">
         <h5 class="card-title mb-0 fw-bold">
@@ -197,7 +301,8 @@
                         <th>Size</th>
                         <th class="text-center">Số lượng</th>
                         <th class="text-end">Đơn giá</th>
-                        <th class="text-end pe-4">Thành tiền</th>
+                        <th class="text-end">Thành tiền</th>
+                        <th class="text-end pe-4">Trạng thái giao</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -210,12 +315,24 @@
                                 <td><span class="badge text-bg-light border"><?= htmlspecialchars($fo['variant_size'] ?: '-') ?></span></td>
                                 <td class="text-center fw-bold"><?= (int) $fo['quantity'] ?></td>
                                 <td class="text-end"><?= number_format((float) $fo['price_at_booking'], 0, ',', '.') ?> đ</td>
-                                <td class="text-end pe-4 fw-semibold"><?= number_format($subtotal, 0, ',', '.') ?> đ</td>
+                                <td class="text-end"><?= number_format($subtotal, 0, ',', '.') ?> đ</td>
+                                <td class="text-end pe-4">
+                                    <?php if (($fo['delivery_status'] ?? 'pending') === 'delivered'): ?>
+                                        <span class="badge bg-success" title="Nhân viên: <?= htmlspecialchars($fo['delivered_by_name'] ?? '-') ?>">
+                                            ✓ Đã giao
+                                        </span>
+                                        <div class="text-muted mt-1" style="font-size: 0.7rem;">
+                                            <?= !empty($fo['delivered_at']) ? date('d/m/Y H:i', strtotime($fo['delivered_at'])) : '' ?>
+                                        </div>
+                                    <?php else: ?>
+                                        <span class="badge bg-warning text-dark">Chờ giao</span>
+                                    <?php endif; ?>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="6" class="text-center py-4 text-muted">
+                            <td colspan="7" class="text-center py-4 text-muted">
                                 Booking này không có đồ ăn hoặc thức uống đi kèm.
                             </td>
                         </tr>

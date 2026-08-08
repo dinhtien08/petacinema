@@ -44,9 +44,19 @@ $currentAction = $_GET['action'] ?? '';
 
         <small class="menu-title">BOOKING</small>
 
-        <a href="?action=staff_booking_list" class="<?= (strpos($currentAction, 'staff_booking') === 0) ? 'active' : '' ?>">
+        <a href="?action=staff_booking_list" class="<?= (strpos($currentAction, 'staff_booking') === 0 && strpos($currentAction, 'staff_booking_checkin') === false) ? 'active' : '' ?>">
             <i class="bi bi-ticket-perforated"></i>
             Bookings
+        </a>
+
+        <a href="?action=staff_checkin" class="<?= ($currentAction === 'staff_checkin') ? 'active' : '' ?>">
+            <i class="bi bi-qr-code-scan"></i>
+            Check-in
+        </a>
+        
+        <a href="?action=staff_food_delivery" class="<?= ($currentAction === 'staff_food_delivery') ? 'active' : '' ?>">
+            <i class="bi bi-box-seam"></i>
+            Giao đồ ăn
         </a>
 
 
