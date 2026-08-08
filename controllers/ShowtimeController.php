@@ -201,6 +201,8 @@ class ShowtimeController
             exit;
         }
 
+        $hasBooking = $this->showtimeModel->hasBooking($id);
+
         $title = 'Chi tiết suất chiếu';
 
         $view = 'admin/showtime/show';
@@ -220,6 +222,11 @@ class ShowtimeController
 
         if (!$showtime) {
             header('Location: ?action=showtimes');
+            exit;
+        }
+
+        if ($this->showtimeModel->hasBooking($id)) {
+            header('Location: ?action=showtimes&error=locked');
             exit;
         }
 
@@ -247,6 +254,11 @@ class ShowtimeController
 
         if (!$showtime) {
             header('Location: ?action=showtimes');
+            exit;
+        }
+
+        if ($this->showtimeModel->hasBooking($id)) {
+            header('Location: ?action=showtimes&error=locked');
             exit;
         }
 
@@ -380,16 +392,15 @@ class ShowtimeController
             'base_price' => $basePrice
         ];
 
-        if ($this->showtimeModel->update($id, $data)) {
+        if ($this->showtimeModel->updateIfNoBooking($id, $data)) {
 
             header('Location: ?action=showtimes');
             exit;
         }
 
-        $errors['general'] = 'Cập nhật thất bại.';
-
-        $view = 'admin/showtime/edit';
-        require PATH_VIEW . 'admin/layout/layout.php';
+        // Trường hợp booking vừa phát sinh trong lúc admin đang mở form.
+        header('Location: ?action=showtimes&error=locked');
+        exit;
     }
     public function delete()
     {
@@ -408,12 +419,12 @@ class ShowtimeController
         }
 
         if ($this->showtimeModel->hasBooking($id)) {
-            header('Location: ?action=showtimes&error=has_booking');
+            header('Location: ?action=showtimes&error=locked');
             exit;
         }
 
         try {
-            $deleted = $this->showtimeModel->delete($id);
+            $deleted = $this->showtimeModel->deleteIfNoBooking($id);
 
             if (!$deleted) {
                 header('Location: ?action=showtimes&error=delete_failed');

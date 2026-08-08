@@ -105,6 +105,58 @@ class ShowtimeModel extends BaseModel
     }
 
     /**
+     * Cập nhật suất chiếu chỉ khi chưa phát sinh bất kỳ booking nào.
+     * Khóa row showtime để tránh race condition với luồng tạo booking.
+     */
+    public function updateIfNoBooking($id, array $data): bool
+    {
+        $startedTransaction = !$this->pdo->inTransaction();
+
+        try {
+            if ($startedTransaction) {
+                $this->pdo->beginTransaction();
+            }
+
+            $lockStmt = $this->pdo->prepare(
+                "SELECT id FROM showtimes WHERE id = :id FOR UPDATE"
+            );
+            $lockStmt->execute([':id' => (int) $id]);
+
+            if (!$lockStmt->fetchColumn()) {
+                if ($startedTransaction && $this->pdo->inTransaction()) {
+                    $this->pdo->rollBack();
+                }
+                return false;
+            }
+
+            $bookingStmt = $this->pdo->prepare(
+                "SELECT 1 FROM bookings WHERE showtime_id = :showtime_id LIMIT 1"
+            );
+            $bookingStmt->execute([':showtime_id' => (int) $id]);
+
+            if ($bookingStmt->fetchColumn()) {
+                if ($startedTransaction && $this->pdo->inTransaction()) {
+                    $this->pdo->rollBack();
+                }
+                return false;
+            }
+
+            $updated = $this->update($id, $data);
+
+            if ($startedTransaction) {
+                $this->pdo->commit();
+            }
+
+            return $updated;
+        } catch (Throwable $e) {
+            if ($startedTransaction && $this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    /**
      * Xóa suất chiếu
      */
     /**
@@ -197,6 +249,57 @@ class ShowtimeModel extends BaseModel
 
         return $stmt->rowCount() > 0;
     }
+
+    /**
+     * Xóa suất chiếu chỉ khi chưa có booking, với row lock để không đua với checkout.
+     */
+    public function deleteIfNoBooking($id): bool
+    {
+        $startedTransaction = !$this->pdo->inTransaction();
+
+        try {
+            if ($startedTransaction) {
+                $this->pdo->beginTransaction();
+            }
+
+            $lockStmt = $this->pdo->prepare(
+                "SELECT id FROM showtimes WHERE id = :id FOR UPDATE"
+            );
+            $lockStmt->execute([':id' => (int) $id]);
+
+            if (!$lockStmt->fetchColumn()) {
+                if ($startedTransaction && $this->pdo->inTransaction()) {
+                    $this->pdo->rollBack();
+                }
+                return false;
+            }
+
+            $bookingStmt = $this->pdo->prepare(
+                "SELECT 1 FROM bookings WHERE showtime_id = :showtime_id LIMIT 1"
+            );
+            $bookingStmt->execute([':showtime_id' => (int) $id]);
+
+            if ($bookingStmt->fetchColumn()) {
+                if ($startedTransaction && $this->pdo->inTransaction()) {
+                    $this->pdo->rollBack();
+                }
+                return false;
+            }
+
+            $deleted = $this->delete($id);
+
+            if ($startedTransaction) {
+                $this->pdo->commit();
+            }
+
+            return $deleted;
+        } catch (Throwable $e) {
+            if ($startedTransaction && $this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
      /**
      * Kiểm tra đã có booking chưa
      */
@@ -233,6 +336,11 @@ class ShowtimeModel extends BaseModel
                     s.start_time,
                     s.end_time,
                     s.base_price,
+                    EXISTS(
+                        SELECT 1
+                        FROM bookings bx
+                        WHERE bx.showtime_id = s.id
+                    ) AS has_booking,
                     (
                         SELECT COUNT(DISTINCT t.seat_id)
                         FROM tickets t

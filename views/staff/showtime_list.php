@@ -177,10 +177,34 @@ if ($status !== '') {
 usort(
     $displayShowtimes,
     function ($first, $second) {
+
+        $firstStatus = getShowtimeStatus(
+            $first['start_time'],
+            $first['end_time']
+        );
+
+        $secondStatus = getShowtimeStatus(
+            $second['start_time'],
+            $second['end_time']
+        );
+
+        $priority = [
+            'showing'  => 1, // Đang chiếu
+            'upcoming' => 2, // Chưa chiếu
+            'ended'    => 3, // Đã chiếu
+        ];
+
+        $firstPriority = $priority[$firstStatus['value']] ?? 99;
+        $secondPriority = $priority[$secondStatus['value']] ?? 99;
+
+        if ($firstPriority !== $secondPriority) {
+            return $firstPriority <=> $secondPriority;
+        }
+
         return strtotime($first['start_time'])
             <=> strtotime($second['start_time']);
     }
-);
+);  
 
 /*
 |--------------------------------------------------------------------------
@@ -188,20 +212,35 @@ usort(
 |--------------------------------------------------------------------------
 */
 
-$tomorrow = date(
+$maxSelectableDate = date(
     'Y-m-d',
-    strtotime('+1 day')
+    strtotime('+7 days')
 );
 
-$nextTwoDays = date(
-    'Y-m-d',
-    strtotime('+2 days')
-);
+$dateOptions = [];
 
-$nextThreeDays = date(
-    'Y-m-d',
-    strtotime('+3 days')
-);
+for ($dayOffset = 0; $dayOffset <= 7; $dayOffset++) {
+    $optionDate = date(
+        'Y-m-d',
+        strtotime('+' . $dayOffset . ' day')
+    );
+
+    if ($dayOffset === 0) {
+        $optionLabel = 'Hôm nay';
+    } elseif ($dayOffset === 1) {
+        $optionLabel = 'Ngày mai';
+    } else {
+        $optionLabel = date(
+            'd/m',
+            strtotime($optionDate)
+        );
+    }
+
+    $dateOptions[] = [
+        'date' => $optionDate,
+        'label' => $optionLabel,
+    ];
+}
 
 /*
 |--------------------------------------------------------------------------
@@ -406,37 +445,17 @@ foreach ($displayShowtimes as $showtime) {
                 Hiển thị từ:
             </span>
 
-            <a
-                href="<?= BASE_URL ?>?action=<?= e($currentAction) ?>&date=<?= $today ?>"
-                class="btn <?= $date === $today ? 'btn-primary' : 'btn-outline-primary' ?> btn-sm">
+            <?php foreach ($dateOptions as $dateOption): ?>
 
-                Hôm nay
+                <a
+                    href="<?= BASE_URL ?>?action=<?= e($currentAction) ?>&date=<?= e($dateOption['date']) ?>"
+                    class="btn <?= $date === $dateOption['date'] ? 'btn-primary' : 'btn-outline-primary' ?> btn-sm">
 
-            </a>
+                    <?= e($dateOption['label']) ?>
 
-            <a
-                href="<?= BASE_URL ?>?action=<?= e($currentAction) ?>&date=<?= $tomorrow ?>"
-                class="btn <?= $date === $tomorrow ? 'btn-primary' : 'btn-outline-primary' ?> btn-sm">
+                </a>
 
-                Ngày mai
-
-            </a>
-
-            <a
-                href="<?= BASE_URL ?>?action=<?= e($currentAction) ?>&date=<?= $nextTwoDays ?>"
-                class="btn <?= $date === $nextTwoDays ? 'btn-primary' : 'btn-outline-primary' ?> btn-sm">
-
-                <?= date('d/m', strtotime($nextTwoDays)) ?>
-
-            </a>
-
-            <a
-                href="<?= BASE_URL ?>?action=<?= e($currentAction) ?>&date=<?= $nextThreeDays ?>"
-                class="btn <?= $date === $nextThreeDays ? 'btn-primary' : 'btn-outline-primary' ?> btn-sm">
-
-                <?= date('d/m', strtotime($nextThreeDays)) ?>
-
-            </a>
+            <?php endforeach; ?>
 
         </div>
 
@@ -600,6 +619,7 @@ foreach ($displayShowtimes as $showtime) {
                     name="date"
                     class="form-control"
                     min="<?= $today ?>"
+                    max="<?= $maxSelectableDate ?>"
                     value="<?= e($date) ?>">
 
             </div>
@@ -715,256 +735,161 @@ foreach ($displayShowtimes as $showtime) {
                         <th>
                             Bắt đầu
                         </th>
-
                         <th>
                             Kết thúc
                         </th>
-
                         <th>
                             Trạng thái
                         </th>
-
                         <th>
                             Giá cơ sở
                         </th>
-
                         <th>
                             Đã đặt / Tổng ghế
                         </th>
-
                         <th width="130">
                             Thao tác
                         </th>
-
                     </tr>
-
                 </thead>
-
                 <tbody>
-
                     <?php if (!empty($displayShowtimes)): ?>
-
                         <?php foreach ($displayShowtimes as $index => $showtime): ?>
-
                             <?php
                             $showtimeStatus = getShowtimeStatus(
                                 $showtime['start_time'],
                                 $showtime['end_time']
                             );
-
                             $bookedSeats = (int)(
                                 $showtime['booked_seats'] ?? 0
                             );
-
                             $totalSeats = (int)(
                                 $showtime['total_seats'] ?? 0
                             );
-
                             $rowClass = $showtimeStatus['value'] === 'ended'
                                 ? 'table-light'
                                 : '';
-
                             $isToday = date(
                                 'Y-m-d',
                                 strtotime($showtime['start_time'])
                             ) === $today;
                             ?>
-
                             <tr class="<?= $rowClass ?>">
-
                                 <td class="text-center">
                                     <?= $index + 1 ?>
                                 </td>
-
                                 <td>
-
                                     <div class="fw-semibold">
                                         <?= e($showtime['movie_title']) ?>
                                     </div>
-
                                     <small class="text-muted">
                                         Mã suất #<?= (int)$showtime['id'] ?>
                                     </small>
-
                                 </td>
-
                                 <td class="text-center">
-
                                     <span class="badge text-bg-light border">
-
                                         <i class="bi bi-door-open me-1"></i>
-
                                         <?= e($showtime['room_name']) ?>
-
                                     </span>
-
                                 </td>
-
                                 <td class="text-center">
-
                                     <div class="fw-semibold">
-
                                         <?= date(
                                             'd/m/Y',
                                             strtotime($showtime['start_time'])
                                         ) ?>
-
                                     </div>
-
                                     <?php if ($isToday): ?>
-
                                         <span class="badge text-bg-warning mt-1">
                                             Hôm nay
                                         </span>
-
                                     <?php endif; ?>
-
                                 </td>
-
                                 <td class="text-center fw-semibold">
-
                                     <?= date(
                                         'H:i',
                                         strtotime($showtime['start_time'])
                                     ) ?>
-
                                 </td>
-
                                 <td class="text-center fw-semibold">
-
                                     <?= date(
                                         'H:i',
                                         strtotime($showtime['end_time'])
                                     ) ?>
-
                                 </td>
-
                                 <td class="text-center">
-
                                     <span
                                         class="badge <?= $showtimeStatus['class'] ?> px-3 py-2">
-
                                         <i class="bi <?= $showtimeStatus['icon'] ?> me-1"></i>
-
                                         <?= $showtimeStatus['label'] ?>
-
                                     </span>
-
                                 </td>
-
                                 <td class="text-end">
-
                                     <?= number_format(
                                         (float)$showtime['base_price'],
                                         0,
                                         ',',
                                         '.'
                                     ) ?>
-
                                     đ
-
                                 </td>
-
                                 <td class="text-center fw-semibold">
-
                                     <span class="badge text-bg-light border px-2 py-1">
-
                                         <span class="text-danger fw-bold">
                                             <?= $bookedSeats ?>
                                         </span>
-
                                         /
-
                                         <?= $totalSeats ?>
-
                                         ghế
-
                                     </span>
-
                                 </td>
-
                                 <td class="text-center">
-
                                     <div class="d-flex justify-content-center gap-1">
-
                                         <a
                                             href="<?= BASE_URL ?>?action=staff_showtimeSeats&id=<?= (int)$showtime['id'] ?>"
                                             class="btn btn-outline-secondary btn-sm"
                                             title="Xem sơ đồ ghế">
-
                                             <i class="bi bi-grid-3x3-gap"></i>
-
                                         </a>
-
                                         <a
                                             href="<?= BASE_URL ?>?action=staff_showtime_show&id=<?= (int)$showtime['id'] ?>"
                                             class="btn btn-info btn-sm"
                                             title="Xem chi tiết">
-
                                             <i class="bi bi-eye"></i>
-
                                         </a>
-
                                     </div>
-
                                 </td>
-
                             </tr>
-
                         <?php endforeach; ?>
-
                     <?php else: ?>
-
                         <tr>
-
                             <td
                                 colspan="10"
                                 class="text-center py-5">
-
                                 <div class="mb-3">
-
                                     <i class="bi bi-calendar-x display-5 text-muted"></i>
-
                                 </div>
-
                                 <h5>
                                     Không tìm thấy suất chiếu
                                 </h5>
-
                                 <p class="text-muted mb-3">
-
                                     Không có suất chiếu nào từ ngày
-
                                     <strong>
                                         <?= date('d/m/Y', strtotime($date)) ?>
                                     </strong>
-
                                     trở đi.
-
                                 </p>
-
                                 <a
                                     href="<?= BASE_URL ?>?action=<?= e($currentAction) ?>"
                                     class="btn btn-outline-primary">
-
                                     <i class="bi bi-arrow-counterclockwise me-1"></i>
-
                                     Quay về hôm nay
-
                                 </a>
-
                             </td>
-
                         </tr>
-
                     <?php endif; ?>
-
                 </tbody>
-
             </table>
-
         </div>
-
     </div>
-
 </div>
