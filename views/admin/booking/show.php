@@ -130,7 +130,6 @@
                 <thead class="table-light">
                     <tr>
                         <th width="60" class="ps-4">STT</th>
-                        <th>Mã vé</th>
                         <th>Số ghế</th>
                         <th>Loại ghế</th>
                         <th class="text-end pe-4">Giá vé</th>
@@ -141,9 +140,6 @@
                         <?php foreach ($tickets as $idx => $ticket): ?>
                             <tr>
                                 <td class="ps-4"><?= $idx + 1 ?></td>
-                                <td>
-                                    <span class="font-monospace text-muted"><?= htmlspecialchars($ticket['ticket_code'] ?? '-') ?></span>
-                                </td>
                                 <td>
                                     <span class="badge text-bg-primary fs-6"><?= htmlspecialchars($ticket['seat_number']) ?></span>
                                 </td>
@@ -164,7 +160,7 @@
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="5" class="text-center py-4 text-muted">
+                            <td colspan="4" class="text-center py-4 text-muted">
                                 Chưa có thông tin ghế đặt cho đơn hàng này.
                             </td>
                         </tr>

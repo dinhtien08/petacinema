@@ -17,7 +17,7 @@
     <?php if (!empty($flash)): ?>
         <div class="row justify-content-center mb-3">
             <div class="col-lg-5 col-md-7">
-                <div class="alert alert-danger alert-dismissible fade show mb-0" role="alert">
+                <div class="alert alert-<?= ($flash['type'] ?? 'error') === 'success' ? 'success' : 'danger' ?> alert-dismissible fade show mb-0" role="alert">
                     <i class="bi bi-exclamation-triangle-fill me-2"></i>
                     <?= htmlspecialchars($flash['message']) ?>
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>

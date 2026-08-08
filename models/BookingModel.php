@@ -4,16 +4,6 @@ class BookingModel extends BaseModel
 {
     protected $table = "bookings";
 
-    public function __construct()
-    {
-        parent::__construct();
-        // Auto-run schema alteration to ensure ENUM('pending','checked_in') DEFAULT 'pending'
-        try {
-            $this->pdo->exec("ALTER TABLE tickets MODIFY COLUMN checkin_status ENUM('pending','checked_in') NOT NULL DEFAULT 'pending'");
-        } catch (Exception $e) {
-            // Ignore error if it fails
-        }
-    }
 
     // JOIN users + showtimes + movies để hiển thị đầy đủ thông tin booking
     public function getAll()
@@ -76,6 +66,7 @@ class BookingModel extends BaseModel
                 p.transaction_code,
                 p.status AS payment_status,
                 p.payment_time,
+                ci.fullname AS checked_in_by_name,
                 GROUP_CONCAT(
                     DISTINCT se.seat_number
                     ORDER BY se.row_char, se.col_num
@@ -88,10 +79,11 @@ class BookingModel extends BaseModel
                 LEFT JOIN rooms r ON r.id = st.room_id
                 LEFT JOIN room_types rt ON rt.id = r.room_type_id
                 LEFT JOIN payments p ON p.id = b.payment_id
+                LEFT JOIN users ci ON ci.id = b.checked_in_by
                 LEFT JOIN tickets t ON t.booking_id = b.id
                 LEFT JOIN seats se ON se.id = t.seat_id
                 WHERE b.id = :id
-                GROUP BY b.id, u.fullname, u.email, m.title, m.poster, st.start_time, st.end_time, st.base_price, r.name, rt.name, p.payment_method, p.transaction_code, p.status, p.payment_time";
+                GROUP BY b.id, u.fullname, u.email, m.title, m.poster, st.start_time, st.end_time, st.base_price, r.name, rt.name, p.payment_method, p.transaction_code, p.status, p.payment_time, ci.fullname";
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->bindParam(':id', $id, PDO::PARAM_INT);
@@ -103,18 +95,13 @@ class BookingModel extends BaseModel
     {
         $sql = "SELECT t.id AS ticket_id,
                        t.price AS ticket_price,
-                       t.checkin_status,
-                       t.checked_in_at,
-                       t.checked_in_by,
                        s.seat_number,
                        s.row_char,
                        s.col_num,
-                       st.name AS seat_type_name,
-                       u.fullname AS checked_in_by_name
+                       st.name AS seat_type_name
                 FROM tickets t
                 JOIN seats s ON s.id = t.seat_id
                 JOIN seat_types st ON st.id = s.seat_type_id
-                LEFT JOIN users u ON u.id = t.checked_in_by
                 WHERE t.booking_id = :booking_id
                 ORDER BY s.row_char ASC, s.col_num ASC";
 
@@ -124,79 +111,89 @@ class BookingModel extends BaseModel
         return $stmt->fetchAll();
     }
 
-    public function determineCheckinStatusValue()
+    /**
+     * Check-in theo booking (không check-in từng ticket).
+     * Khóa bản ghi để hai nhân viên quét cùng lúc không thể check-in trùng.
+     */
+    public function checkInBooking(int $bookingId, int $staffId): array
     {
         try {
-            $stmt = $this->pdo->query("DESCRIBE tickets checkin_status");
-            $col = $stmt->fetch();
-            if ($col) {
-                $type = strtolower($col['Type']);
-                if (strpos($type, 'int') !== false) {
-                    return 1;
-                }
-                if (strpos($type, 'enum') !== false) {
-                    if (strpos($type, 'checked_in') !== false) {
-                        return 'checked_in';
-                    }
-                    if (strpos($type, 'checked') !== false) {
-                        return 'checked';
-                    }
-                    return '1';
-                }
+            $this->pdo->beginTransaction();
+
+            $stmt = $this->pdo->prepare(
+                "SELECT id, status, checkin_status, checked_in_at, checked_in_by
+                 FROM bookings
+                 WHERE id = :id
+                 LIMIT 1
+                 FOR UPDATE"
+            );
+            $stmt->execute([':id' => $bookingId]);
+            $booking = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$booking) {
+                $this->pdo->rollBack();
+                return ['success' => false, 'message' => 'Không tìm thấy booking.'];
             }
-        } catch (Exception $e) {
-            // Ignore and fallback
+
+            if (($booking['status'] ?? '') !== 'paid') {
+                $this->pdo->rollBack();
+                return ['success' => false, 'message' => 'Chỉ booking đã thanh toán mới được check-in.'];
+            }
+
+            if (($booking['checkin_status'] ?? 'pending') === 'checked_in') {
+                $this->pdo->rollBack();
+                return ['success' => false, 'message' => 'Booking này đã được check-in trước đó.'];
+            }
+
+            $update = $this->pdo->prepare(
+                "UPDATE bookings
+                 SET checkin_status = 'checked_in',
+                     checked_in_at = NOW(),
+                     checked_in_by = :staff_id
+                 WHERE id = :id
+                   AND status = 'paid'
+                   AND checkin_status <> 'checked_in'"
+            );
+            $update->execute([
+                ':staff_id' => $staffId,
+                ':id' => $bookingId,
+            ]);
+
+            if ($update->rowCount() !== 1) {
+                $this->pdo->rollBack();
+                return ['success' => false, 'message' => 'Không thể check-in booking. Vui lòng tải lại và thử lại.'];
+            }
+
+            $this->pdo->commit();
+            return ['success' => true, 'message' => 'Check-in booking thành công.'];
+        } catch (Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            return ['success' => false, 'message' => 'Không thể check-in booking: ' . $e->getMessage()];
         }
-        return 'checked_in';
-    }
-
-    public function updateTicketCheckIn($ticketId, $staffId, $status = 'checked_in')
-    {
-        $sql = "UPDATE tickets 
-                SET checkin_status = :status, 
-                    checked_in_at = NOW(), 
-                    checked_in_by = :staff_id 
-                WHERE id = :ticket_id";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->bindParam(':status', $status);
-        $stmt->bindParam(':staff_id', $staffId, PDO::PARAM_INT);
-        $stmt->bindParam(':ticket_id', $ticketId, PDO::PARAM_INT);
-        return $stmt->execute();
-    }
-
-    public function updateBookingCheckInAll($bookingId, $staffId)
-    {
-        $sql = "UPDATE tickets 
-                SET checkin_status = 'checked_in', 
-                    checked_in_at = NOW(), 
-                    checked_in_by = :staff_id 
-                WHERE booking_id = :booking_id";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->bindParam(':staff_id', $staffId, PDO::PARAM_INT);
-        $stmt->bindParam(':booking_id', $bookingId, PDO::PARAM_INT);
-        return $stmt->execute();
     }
 
     public function getTicketDetails($ticketId)
     {
         $sql = "SELECT t.id AS ticket_id,
-                       t.ticket_code,
                        t.price AS ticket_price,
-                       t.checkin_status,
-                       t.checked_in_at,
-                       t.checked_in_by,
                        s.seat_number,
                        s.row_char,
                        s.col_num,
                        st.name AS seat_type_name,
+                       b.id AS booking_id,
                        b.booking_code,
+                       b.checkin_status,
+                       b.checked_in_at,
+                       b.checked_in_by,
                        u.fullname AS customer_name,
                        u.email AS customer_email,
                        m.title AS movie_title,
                        showt.start_time,
                        showt.end_time,
                        r.name AS room_name,
-                       su.fullname AS staff_name
+                       ci.fullname AS staff_name
                 FROM tickets t
                 JOIN seats s ON s.id = t.seat_id
                 JOIN seat_types st ON st.id = s.seat_type_id
@@ -205,7 +202,7 @@ class BookingModel extends BaseModel
                 JOIN showtimes showt ON showt.id = b.showtime_id
                 JOIN movies m ON m.id = showt.movie_id
                 LEFT JOIN rooms r ON r.id = showt.room_id
-                LEFT JOIN users su ON su.id = t.checked_in_by
+                LEFT JOIN users ci ON ci.id = b.checked_in_by
                 WHERE t.id = :ticket_id";
         $stmt = $this->pdo->prepare($sql);
         $stmt->bindParam(':ticket_id', $ticketId, PDO::PARAM_INT);
@@ -213,60 +210,22 @@ class BookingModel extends BaseModel
         return $stmt->fetch();
     }
 
-    public function getTicketDetailsByCode($ticketCode)
-    {
-        $sql = "SELECT t.id AS ticket_id,
-                       t.ticket_code,
-                       t.price AS ticket_price,
-                       t.checkin_status,
-                       t.checked_in_at,
-                       t.checked_in_by,
-                       s.seat_number,
-                       s.row_char,
-                       s.col_num,
-                       st.name AS seat_type_name,
-                       b.booking_code,
-                       u.fullname AS customer_name,
-                       u.email AS customer_email,
-                       m.title AS movie_title,
-                       showt.start_time,
-                       showt.end_time,
-                       r.name AS room_name,
-                       su.fullname AS staff_name
-                FROM tickets t
-                JOIN seats s ON s.id = t.seat_id
-                JOIN seat_types st ON st.id = s.seat_type_id
-                JOIN bookings b ON b.id = t.booking_id
-                JOIN users u ON u.id = b.user_id
-                JOIN showtimes showt ON showt.id = b.showtime_id
-                JOIN movies m ON m.id = showt.movie_id
-                LEFT JOIN rooms r ON r.id = showt.room_id
-                LEFT JOIN users su ON su.id = t.checked_in_by
-                WHERE t.ticket_code = :ticket_code";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->bindParam(':ticket_code', $ticketCode, PDO::PARAM_STR);
-        $stmt->execute();
-        return $stmt->fetch();
-    }
-
     public function getBookingByCode($bookingCode)
     {
-        $sql = "SELECT b.id FROM bookings b WHERE b.booking_code = :booking_code";
+        $sql = "SELECT b.id,
+                       b.booking_code,
+                       b.status,
+                       b.checkin_status,
+                       b.checked_in_at,
+                       b.checked_in_by
+                FROM bookings b
+                WHERE b.booking_code = :booking_code
+                LIMIT 1";
         $stmt = $this->pdo->prepare($sql);
         $stmt->bindParam(':booking_code', $bookingCode, PDO::PARAM_STR);
         $stmt->execute();
         return $stmt->fetch();
     }
-
-    public function getTicketByCode($ticketCode)
-    {
-        $sql = "SELECT * FROM tickets WHERE ticket_code = :ticket_code";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->bindParam(':ticket_code', $ticketCode, PDO::PARAM_STR);
-        $stmt->execute();
-        return $stmt->fetch();
-    }
-
 
     public function getBookingFoodOrders($bookingId)
     {
