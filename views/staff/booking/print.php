@@ -24,24 +24,31 @@
             gap: 10px;
         }
 
-        /* Printable Receipt Styles (80mm width) */
+        /* Printable ticket at 4:3 aspect ratio (120mm x 90mm) */
         .receipt-container {
-            width: 80mm;
+            width: 120mm;
             margin: 0 auto;
-            background-color: #ffffff;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-            padding: 6mm;
-            box-sizing: border-box;
-            border: 1px solid #e0e0e0;
         }
 
         .ticket-receipt {
+            width: 120mm;
+            height: 90mm;
+            margin: 0 auto 10mm auto;
+            background-color: #ffffff;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            padding: 4mm 5mm;
+            box-sizing: border-box;
+            border: 1px solid #333;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
             font-family: 'Courier New', Courier, monospace;
             font-size: 11px;
             line-height: 1.4;
             color: #000000;
-            word-wrap: break-word;
             page-break-after: always;
+            position: relative;
+            overflow: hidden;
         }
 
         /* Avoid page break on the very last ticket */
@@ -49,51 +56,61 @@
             page-break-after: avoid;
         }
 
-        .receipt-header {
-            text-align: center;
-            margin-bottom: 4mm;
+        /* 2-column layout (70% main ticket body, 26% stub) */
+        .ticket-main {
+            width: 70%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding-right: 4mm;
+            border-right: 1.5px dashed #000000;
         }
 
-        .receipt-header .cinema-name {
-            font-size: 16px;
+        .ticket-stub {
+            width: 27%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding-left: 2mm;
+            text-align: center;
+        }
+
+        .ticket-header {
+            text-align: center;
+            margin-bottom: 2mm;
+        }
+
+        .ticket-header .cinema-name {
+            font-size: 14px;
             font-weight: bold;
             letter-spacing: 1px;
-            margin-bottom: 1mm;
         }
 
-        .receipt-header .receipt-title {
-            font-size: 12px;
+        .ticket-header .ticket-title {
+            font-size: 11px;
             font-weight: bold;
             text-transform: uppercase;
-            border-top: 1px dashed #000;
-            border-bottom: 1px dashed #000;
-            padding: 1mm 0;
-            margin-top: 2mm;
         }
 
-        .receipt-divider {
-            border-top: 1px dashed #000000;
-            margin: 3mm 0;
-        }
-
-        .receipt-double-divider {
-            border-top: 2px double #000000;
-            margin: 3mm 0;
-        }
-
-        .receipt-row {
+        .info-row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 1mm;
+            margin-bottom: 0.8mm;
         }
 
-        .receipt-row .label {
+        .info-label {
             font-weight: bold;
         }
 
-        .receipt-row .value {
+        .info-value {
             text-align: right;
-            max-width: 60%;
+            max-width: 65%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .movie-title-val {
@@ -103,35 +120,31 @@
         }
 
         .seat-number-val {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: bold;
             border: 1px solid #000;
             padding: 0 1.5mm;
             display: inline-block;
         }
 
-        .qr-wrapper {
-            text-align: center;
-            margin: 4mm 0;
-        }
-
-        .qr-wrapper canvas {
-            display: block;
-            margin: 0 auto;
-        }
-
         .ticket-code-display {
-            text-align: center;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: bold;
-            letter-spacing: 2px;
-            margin-top: 1mm;
+            letter-spacing: 1px;
+            border: 1.5px dashed #000;
+            padding: 1.5mm 1mm;
+            display: inline-block;
+            width: 100%;
+            word-break: break-all;
+            text-align: center;
         }
 
-        .receipt-footer {
+        .ticket-footer {
             text-align: center;
-            margin-top: 5mm;
-            font-size: 9px;
+            font-size: 8px;
+            border-top: 1px dashed #ccc;
+            padding-top: 1mm;
+            margin-top: 1mm;
         }
 
         /* Print Media Queries */
@@ -147,15 +160,21 @@
             }
 
             .receipt-container {
-                width: 80mm;
+                width: 120mm;
                 margin: 0;
-                padding: 4mm;
+            }
+
+            .ticket-receipt {
+                width: 120mm;
+                height: 90mm;
+                margin: 0;
                 box-shadow: none;
-                border: none;
+                border: 1px solid #000;
+                page-break-after: always;
             }
 
             @page {
-                size: 80mm auto;
+                size: 120mm 90mm;
                 margin: 0;
             }
         }
@@ -165,7 +184,7 @@
 
     <!-- Toolbar displayed on screen only -->
     <div class="no-print-toolbar no-print">
-        <a href="?action=staff_checkin" class="btn btn-secondary flex-fill">
+        <a href="<?= !empty($_GET['booking_id']) ? '?action=staff_booking_detail&id=' . (int)$_GET['booking_id'] : '?action=staff_checkin' ?>" class="btn btn-secondary flex-fill">
             <i class="bi bi-arrow-left"></i> Quay lại
         </a>
         <button onclick="window.print()" class="btn btn-primary flex-fill">
@@ -173,96 +192,99 @@
         </button>
     </div>
 
-    <!-- Container containing all tickets -->
+    <!-- Container containing all tickets in 4:3 format -->
     <div class="receipt-container">
         <?php foreach ($tickets as $idx => $t): ?>
             <div class="ticket-receipt">
-                <div class="receipt-header">
-                    <div class="cinema-name">PETACINEMA</div>
-                    <div class="receipt-title">VÉ XEM PHIM</div>
+                <!-- 1. Main Ticket Part (Left) -->
+                <div class="ticket-main">
+                    <div class="ticket-header">
+                        <div class="cinema-name">PETACINEMA</div>
+                        <div class="ticket-title">VÉ XEM PHIM</div>
+                    </div>
+
+                    <div class="ticket-body">
+                        <div class="info-row">
+                            <span class="info-label">Mã Đơn:</span>
+                            <span class="info-value"><?= htmlspecialchars($t['booking_code'] ?? '-') ?></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Khách:</span>
+                            <span class="info-value"><?= htmlspecialchars($t['customer_name'] ?? 'Khách vãng lai') ?></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Phim:</span>
+                            <span class="info-value movie-title-val" title="<?= htmlspecialchars($t['movie_title'] ?? '') ?>">
+                                <?= htmlspecialchars($t['movie_title'] ?? '-') ?>
+                            </span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Suất:</span>
+                            <span class="info-value">
+                                <?= !empty($t['start_time']) ? date('d/m/Y H:i', strtotime($t['start_time'])) : '-' ?>
+                            </span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Phòng:</span>
+                            <span class="info-value fw-bold"><?= htmlspecialchars($t['room_name'] ?? '-') ?></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Ghế:</span>
+                            <span class="info-value">
+                                <span class="seat-number-val"><?= htmlspecialchars($t['seat_number'] ?? '-') ?></span>
+                                <small>(<?= htmlspecialchars($t['seat_type_name'] ?? 'Standard') ?>)</small>
+                            </span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Giá:</span>
+                            <span class="info-value"><?= number_format((float)($t['ticket_price'] ?? 0), 0, ',', '.') ?> đ</span>
+                        </div>
+                    </div>
+
+                    <div class="ticket-footer">
+                        PetaCinema - Trải nghiệm điện ảnh đỉnh cao
+                    </div>
                 </div>
 
-                <div class="receipt-row">
-                    <span class="label">Mã Booking:</span>
-                    <span class="value"><?= htmlspecialchars($t['booking_code'] ?? '-') ?></span>
-                </div>
-                <div class="receipt-row">
-                    <span class="label">Khách hàng:</span>
-                    <span class="value"><?= htmlspecialchars($t['customer_name'] ?? 'Khách vãng lai') ?></span>
-                </div>
-                
-                <div class="receipt-divider"></div>
+                <!-- 2. Detachable Ticket Stub Part (Right) -->
+                <div class="ticket-stub">
+                    <div class="ticket-header">
+                        <div class="cinema-name" style="font-size: 11px;">PETACINEMA</div>
+                        <div style="font-size: 9px; font-weight: bold;">STUB</div>
+                    </div>
 
-                <div class="receipt-row">
-                    <span class="label">Phim:</span>
-                    <span class="value movie-title-val"><?= htmlspecialchars($t['movie_title'] ?? '-') ?></span>
-                </div>
-                <div class="receipt-row">
-                    <span class="label">Suất chiếu:</span>
-                    <span class="value">
-                        <?= !empty($t['start_time']) ? date('d/m/Y H:i', strtotime($t['start_time'])) : '-' ?>
-                    </span>
-                </div>
-                <div class="receipt-row">
-                    <span class="label">Phòng chiếu:</span>
-                    <span class="value fw-bold"><?= htmlspecialchars($t['room_name'] ?? '-') ?></span>
-                </div>
-                <div class="receipt-row">
-                    <span class="label">Ghế đặt:</span>
-                    <span class="value"><span class="seat-number-val"><?= htmlspecialchars($t['seat_number'] ?? '-') ?></span></span>
-                </div>
-                <div class="receipt-row">
-                    <span class="label">Loại ghế:</span>
-                    <span class="value"><?= htmlspecialchars($t['seat_type_name'] ?? 'Standard') ?></span>
-                </div>
-                <div class="receipt-row">
-                    <span class="label">Giá vé:</span>
-                    <span class="value"><?= number_format((float)($t['ticket_price'] ?? 0), 0, ',', '.') ?> đ</span>
-                </div>
+                    <div class="ticket-body-stub" style="width: 100%;">
+                        <div style="font-size: 9px; margin-bottom: 2px; text-align: left;">
+                            <strong>Phim:</strong><br>
+                            <span style="font-weight: bold; font-size: 10px; display: inline-block; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                <?= htmlspecialchars($t['movie_title'] ?? '-') ?>
+                            </span>
+                        </div>
+                        <div class="info-row" style="font-size: 9px;">
+                            <span>Phòng:</span>
+                            <span class="fw-bold"><?= htmlspecialchars($t['room_name'] ?? '-') ?></span>
+                        </div>
+                        <div class="info-row" style="font-size: 10px; margin-top: 1mm;">
+                            <span>Ghế:</span>
+                            <span class="seat-number-val px-1" style="font-size: 11px;"><?= htmlspecialchars($t['seat_number'] ?? '-') ?></span>
+                        </div>
+                    </div>
 
-                <div class="receipt-divider"></div>
+                    <div class="ticket-code-wrapper" style="width: 100%; margin-top: 2mm;">
+                        <div class="ticket-code-display"><?= htmlspecialchars($t['ticket_code'] ?? '-') ?></div>
+                    </div>
 
-                <!-- QR Code generator target -->
-                <div class="qr-wrapper">
-                    <canvas id="qr-<?= $t['ticket_id'] ?>"></canvas>
-                    <div class="ticket-code-display"><?= htmlspecialchars($t['ticket_code'] ?? '-') ?></div>
-                </div>
-
-                <div class="receipt-double-divider"></div>
-
-                <div class="receipt-row">
-                    <span class="label">Nhân viên:</span>
-                    <span class="value"><?= htmlspecialchars($t['staff_name'] ?? $_SESSION['user']['fullname'] ?? 'Staff') ?></span>
-                </div>
-                <div class="receipt-row">
-                    <span class="label">Thời gian in:</span>
-                    <span class="value"><?= date('d/m/Y H:i:s') ?></span>
-                </div>
-
-                <div class="receipt-footer">
-                    Chúc quý khách xem phim vui vẻ!<br>
-                    PetaCinema - Trải nghiệm điện ảnh đỉnh cao
+                    <div style="font-size: 8px; text-align: center; color: #555; width: 100%; border-top: 1px dashed #ccc; padding-top: 1mm;">
+                        NV: <?= htmlspecialchars($t['staff_name'] ?? $_SESSION['user']['fullname'] ?? 'Staff') ?>
+                    </div>
                 </div>
             </div>
         <?php endforeach; ?>
     </div>
 
-    <!-- Load QRious Library via CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
-    
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Generate QR Code for each ticket
-            <?php foreach ($tickets as $t): ?>
-                new QRious({
-                    element: document.getElementById('qr-<?= $t['ticket_id'] ?>'),
-                    value: '<?= esc_attr_js($t['ticket_code'] ?? '') ?>',
-                    size: 130,
-                    level: 'H'
-                });
-            <?php endforeach; ?>
-
-            // Trigger window print
+            // Trigger window print after render
             setTimeout(function() {
                 window.print();
             }, 300);
@@ -270,14 +292,12 @@
 
         // Redirect back on print completion or cancel
         window.onafterprint = function() {
-            window.location.href = "?action=staff_checkin";
+            <?php if (!empty($_GET['booking_id'])): ?>
+                window.location.href = "?action=staff_booking_detail&id=<?= (int)$_GET['booking_id'] ?>";
+            <?php else: ?>
+                window.location.href = "?action=staff_checkin";
+            <?php endif; ?>
         };
     </script>
 </body>
 </html>
-<?php
-// Helper to escape JS string attribute
-function esc_attr_js($str) {
-    return str_replace(["'", "\n", "\r"], ["\\'", '', ''], (string) $str);
-}
-?>

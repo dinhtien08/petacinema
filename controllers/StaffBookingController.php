@@ -34,12 +34,24 @@ class StaffBookingController
     public function show()
     {
         $id = (int) ($_GET['id'] ?? 0);
+        $code = trim($_GET['code'] ?? '');
         $bookingModel = new BookingModel();
-        $booking = $bookingModel->getById($id);
+
+        if ($id <= 0 && !empty($code)) {
+            $found = $bookingModel->getBookingByCode($code);
+            if ($found) {
+                $id = (int) $found['id'];
+            }
+        }
+
+        $booking = null;
+        if ($id > 0) {
+            $booking = $bookingModel->getById($id);
+        }
 
         if (!$booking) {
             set_flash('error', 'Không tìm thấy booking.');
-            header('Location: ?action=staff_booking_list');
+            header('Location: ?action=staff_checkin');
             exit;
         }
 
@@ -112,6 +124,22 @@ class StaffBookingController
                 exit;
             }
 
+            // Chặn check-in lại: nếu TẤT CẢ vé trong booking đã checked_in thì báo lỗi
+            $allCheckedIn = true;
+            foreach ($tickets as $t) {
+                if (($t['checkin_status'] ?? '') !== 'checked_in') {
+                    $allCheckedIn = false;
+                    break;
+                }
+            }
+            if ($allCheckedIn) {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Booking already checked in'
+                ]);
+                exit;
+            }
+
             $bookingModel->updateBookingCheckInAll($bookingId, $staffId, 'checked_in');
             $ticketIds = array_map(fn($t) => $t['ticket_id'], $tickets);
 
@@ -179,6 +207,18 @@ class StaffBookingController
         $bookingModel = new BookingModel();
         $staffId = $_SESSION['user']['id'];
 
+        // Chặn check-in lại vé đã checked_in (đường đi qua GET link, không chỉ AJAX)
+        $existingTicket = $bookingModel->getTicketDetails($ticketId);
+        if ($existingTicket && ($existingTicket['checkin_status'] ?? '') === 'checked_in') {
+            set_flash('error', 'Vé này đã được check-in trước đó.');
+            if ($bookingId > 0) {
+                header("Location: ?action=staff_booking_detail&id=" . $bookingId);
+            } else {
+                header('Location: ?action=staff_booking_list');
+            }
+            exit;
+        }
+
         $bookingModel->updateTicketCheckIn($ticketId, $staffId, 'checked_in');
         set_flash('success', 'Vé đã được check-in thành công.');
 
@@ -207,10 +247,133 @@ class StaffBookingController
         $bookingModel = new BookingModel();
         $staffId = $_SESSION['user']['id'];
 
+        // Chặn check-in lại nếu tất cả vé đã checked_in
+        $tickets = $bookingModel->getBookingTickets($bookingId);
+        $allCheckedIn = !empty($tickets);
+        foreach ($tickets as $t) {
+            if (($t['checkin_status'] ?? '') !== 'checked_in') {
+                $allCheckedIn = false;
+                break;
+            }
+        }
+        if ($allCheckedIn) {
+            set_flash('error', 'Booking này đã được check-in toàn bộ trước đó.');
+            header("Location: ?action=staff_booking_detail&id=" . $bookingId);
+            exit;
+        }
+
         $bookingModel->updateBookingCheckInAll($bookingId, $staffId, 'checked_in');
         set_flash('success', 'Tất cả vé trong booking đã được check-in.');
 
-        header("Location: ?action=staff_booking_detail&id=" . $bookingId);
+        // In vé cho tất cả các ghế đã đặt trong đơn
+        $ticketIds = array_map(fn($t) => $t['ticket_id'], $tickets);
+        if (!empty($ticketIds)) {
+            header("Location: ?action=staff_ticket_print&ids=" . implode(',', $ticketIds));
+        } else {
+            header("Location: ?action=staff_booking_detail&id=" . $bookingId);
+        }
         exit;
+    }
+
+    public function bookingCheckIn()
+    {
+        $bookingId = (int) ($_GET['booking_id'] ?? 0);
+        if ($bookingId <= 0) {
+            set_flash('error', 'ID booking không hợp lệ.');
+            header('Location: ?action=staff_checkin');
+            exit;
+        }
+
+        $bookingModel = new BookingModel();
+        $staffId = $_SESSION['user']['id'];
+
+        $tickets = $bookingModel->getBookingTickets($bookingId);
+        if (empty($tickets)) {
+            set_flash('error', 'Không tìm thấy vé cho booking này.');
+            header("Location: ?action=staff_booking_detail&id=" . $bookingId);
+            exit;
+        }
+
+        // Thực hiện check-in cho toàn bộ vé
+        $bookingModel->updateBookingCheckInAll($bookingId, $staffId);
+        set_flash('success', 'Đã check-in toàn bộ vé thành công.');
+
+        // Lấy lại danh sách ticket để lấy danh sách ID đầy đủ
+        $ticketIds = array_map(fn($t) => $t['ticket_id'], $tickets);
+        
+        // Chuyển hướng đến trang in vé của toàn bộ ghế, kèm theo booking_id để quay lại
+        header("Location: ?action=staff_ticket_print&ids=" . implode(',', $ticketIds) . "&booking_id=" . $bookingId);
+        exit;
+    }
+
+    public function confirmFoodDelivery()
+    {
+        $bookingId = (int) ($_GET['booking_id'] ?? 0);
+        $redirect = $_GET['redirect'] ?? '';
+        if ($bookingId <= 0) {
+            set_flash('error', 'ID booking không hợp lệ.');
+            header('Location: ?action=staff_checkin');
+            exit;
+        }
+
+        $bookingModel = new BookingModel();
+        $staffId = $_SESSION['user']['id'];
+
+        $bookingModel->confirmFoodDelivered($bookingId, $staffId);
+        set_flash('success', 'Đã xác nhận giao đồ ăn thành công.');
+
+        if ($redirect === 'food_delivery') {
+            $booking = $bookingModel->getById($bookingId);
+            $code = $booking['booking_code'] ?? '';
+            header("Location: ?action=staff_food_delivery&code=" . urlencode($code));
+        } else {
+            header("Location: ?action=staff_booking_detail&id=" . $bookingId);
+        }
+        exit;
+    }
+
+    public function foodDeliveryView()
+    {
+        $code = trim($_GET['code'] ?? '');
+        $bookingModel = new BookingModel();
+        $booking = null;
+        $foodOrders = [];
+        $hasFoodOrders = false;
+        $allFoodDelivered = false;
+        $deliveryTime = null;
+        $deliveredBy = null;
+
+        if (!empty($code)) {
+            $found = $bookingModel->getBookingByCode($code);
+            if ($found) {
+                $bookingId = (int) $found['id'];
+                $booking = $bookingModel->getById($bookingId);
+                if ($booking) {
+                    $foodOrders = $bookingModel->getBookingFoodOrders($bookingId);
+                    $hasFoodOrders = !empty($foodOrders);
+                    $allFoodDelivered = $hasFoodOrders;
+                    foreach ($foodOrders as $fo) {
+                        if (($fo['delivery_status'] ?? 'pending') !== 'delivered') {
+                            $allFoodDelivered = false;
+                        } else {
+                            if (empty($deliveryTime) && !empty($fo['delivered_at'])) {
+                                $deliveryTime = date('d/m/Y H:i:s', strtotime($fo['delivered_at']));
+                                $deliveredBy = $fo['delivered_by_name'];
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (!$booking) {
+                set_flash('error', 'Không tìm thấy booking hoặc mã đặt vé không hợp lệ.');
+                header('Location: ?action=staff_food_delivery');
+                exit;
+            }
+        }
+
+        $flash = get_flash();
+        $view = 'staff/booking/food_delivery';
+        require_once PATH_VIEW . 'staff/layout/layout.php';
     }
 }

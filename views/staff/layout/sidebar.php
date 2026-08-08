@@ -51,7 +51,12 @@ $currentAction = $_GET['action'] ?? '';
 
         <a href="?action=staff_checkin" class="<?= ($currentAction === 'staff_checkin') ? 'active' : '' ?>">
             <i class="bi bi-qr-code-scan"></i>
-            QR Check-in
+            Check-in
+        </a>
+        
+        <a href="?action=staff_food_delivery" class="<?= ($currentAction === 'staff_food_delivery') ? 'active' : '' ?>">
+            <i class="bi bi-box-seam"></i>
+            Giao đồ ăn
         </a>
 
 

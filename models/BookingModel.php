@@ -164,15 +164,14 @@ class BookingModel extends BaseModel
         return $stmt->execute();
     }
 
-    public function updateBookingCheckInAll($bookingId, $staffId, $status = 'checked_in')
+    public function updateBookingCheckInAll($bookingId, $staffId)
     {
         $sql = "UPDATE tickets 
-                SET checkin_status = :status, 
+                SET checkin_status = 'checked_in', 
                     checked_in_at = NOW(), 
                     checked_in_by = :staff_id 
                 WHERE booking_id = :booking_id";
         $stmt = $this->pdo->prepare($sql);
-        $stmt->bindParam(':status', $status);
         $stmt->bindParam(':staff_id', $staffId, PDO::PARAM_INT);
         $stmt->bindParam(':booking_id', $bookingId, PDO::PARAM_INT);
         return $stmt->execute();
@@ -273,10 +272,12 @@ class BookingModel extends BaseModel
     {
         $sql = "SELECT fo.*,
                        f.name AS food_name,
-                       fv.size AS variant_size
+                       fv.size AS variant_size,
+                       u.fullname AS delivered_by_name
                 FROM food_orders fo
                 JOIN food_variants fv ON fv.id = fo.food_variant_id
                 JOIN foods f ON f.id = fv.food_id
+                LEFT JOIN users u ON u.id = fo.delivered_by
                 WHERE fo.booking_id = :booking_id
                 ORDER BY fo.id ASC";
 
@@ -285,7 +286,6 @@ class BookingModel extends BaseModel
         $stmt->execute();
         return $stmt->fetchAll();
     }
-
 
     /**
      * Danh sách vé đã thanh toán của một khách hàng.
@@ -338,6 +338,19 @@ class BookingModel extends BaseModel
         $stmt->execute();
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    
+    public function confirmFoodDelivered($bookingId, $staffId)
+    {
+        $sql = "UPDATE food_orders 
+                SET delivery_status = 'delivered', 
+                    delivered_at = NOW(), 
+                    delivered_by = :staff_id 
+                WHERE booking_id = :booking_id";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->bindParam(':staff_id', $staffId, PDO::PARAM_INT);
+        $stmt->bindParam(':booking_id', $bookingId, PDO::PARAM_INT);
+        return $stmt->execute();
     }
 
     // Danh sách suất chiếu kèm tên phim + phòng, dùng cho dropdown chọn suất chiếu
