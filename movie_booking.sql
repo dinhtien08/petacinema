@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Aug 07, 2026 at 08:40 PM
+-- Generation Time: Aug 08, 2026 at 12:25 AM
 -- Server version: 8.0.30
 -- PHP Version: 8.1.10
 
@@ -51,8 +51,11 @@ INSERT INTO `bookings` (`id`, `booking_code`, `user_id`, `showtime_id`, `payment
 (15, 'PET202608060002', 1, 22, NULL, 126000.00, 'paid', '2026-08-06 16:02:50', 'pending', NULL, NULL),
 (16, 'PET202608060003', 3, 25, NULL, 280000.00, 'paid', '2026-08-06 16:32:02', 'pending', NULL, NULL),
 (17, 'PET202608080017', 9, 28, 6, 57000.00, 'paid', '2026-08-07 20:03:55', 'pending', NULL, NULL),
-(18, 'PET202608080018', 9, 38, 7, 414000.00, 'paid', '2026-08-07 20:17:40', 'pending', NULL, NULL),
-(19, 'PET202608080019', 9, 28, 8, 298000.00, 'cancelled', '2026-08-07 20:20:42', 'pending', NULL, NULL);
+(18, 'PET202608080018', 9, 38, 7, 414000.00, 'paid', '2026-08-07 20:17:40', 'checked_in', NULL, NULL),
+(19, 'PET202608080019', 9, 28, 8, 298000.00, 'cancelled', '2026-08-07 20:20:42', 'pending', NULL, NULL),
+(20, 'PET202608080020', 9, 28, 9, 774000.00, 'paid', '2026-08-07 21:03:46', 'pending', NULL, NULL),
+(22, 'PET202608080022', 9, 28, 10, 458000.00, 'paid', '2026-08-07 23:11:01', 'pending', NULL, NULL),
+(23, 'PET202608080023', 9, 28, 11, 278000.00, 'paid', '2026-08-08 00:13:19', 'pending', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -95,20 +98,29 @@ CREATE TABLE `food_orders` (
   `quantity` int NOT NULL,
   `price_at_booking` decimal(10,2) DEFAULT NULL,
   `delivered_at` datetime DEFAULT NULL,
-  `delivered_by` int DEFAULT NULL
+  `delivered_by` int DEFAULT NULL,
+  `delivery_status` enum('pending','delivered') NOT NULL DEFAULT 'pending'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `food_orders`
 --
 
-INSERT INTO `food_orders` (`id`, `booking_id`, `food_variant_id`, `quantity`, `price_at_booking`, `delivered_at`, `delivered_by`) VALUES
-(10, 13, 60, 1, 30000.00, NULL, NULL),
-(11, 14, 60, 1, 30000.00, NULL, NULL),
-(12, 18, 51, 1, 45000.00, NULL, NULL),
-(13, 18, 56, 1, 25000.00, NULL, NULL),
-(14, 19, 51, 1, 45000.00, NULL, NULL),
-(15, 19, 56, 1, 25000.00, NULL, NULL);
+INSERT INTO `food_orders` (`id`, `booking_id`, `food_variant_id`, `quantity`, `price_at_booking`, `delivered_at`, `delivered_by`, `delivery_status`) VALUES
+(10, 13, 60, 1, 30000.00, NULL, NULL, 'pending'),
+(11, 14, 60, 1, 30000.00, NULL, NULL, 'pending'),
+(12, 18, 51, 1, 45000.00, NULL, NULL, 'pending'),
+(13, 18, 56, 1, 25000.00, NULL, NULL, 'pending'),
+(14, 19, 51, 1, 45000.00, NULL, NULL, 'pending'),
+(15, 19, 56, 1, 25000.00, NULL, NULL, 'pending'),
+(16, 20, 51, 2, 45000.00, NULL, NULL, 'pending'),
+(17, 20, 52, 2, 60000.00, NULL, NULL, 'pending'),
+(18, 20, 56, 2, 25000.00, NULL, NULL, 'pending'),
+(19, 20, 57, 2, 30000.00, NULL, NULL, 'pending'),
+(20, 20, 63, 3, 69000.00, NULL, NULL, 'pending'),
+(21, 20, 64, 2, 95000.00, NULL, NULL, 'pending'),
+(22, 23, 63, 1, 69000.00, NULL, NULL, 'pending'),
+(23, 23, 64, 1, 95000.00, NULL, NULL, 'pending');
 
 -- --------------------------------------------------------
 
@@ -129,20 +141,20 @@ CREATE TABLE `food_variants` (
 --
 
 INSERT INTO `food_variants` (`id`, `food_id`, `size`, `price`, `stock`) VALUES
-(51, 11, 'S', 45000.00, 99),
-(52, 11, 'M', 60000.00, 100),
+(51, 11, 'S', 45000.00, 97),
+(52, 11, 'M', 60000.00, 98),
 (53, 12, 'S', 50000.00, 100),
 (54, 12, 'M', 65000.00, 100),
 (55, 12, 'L', 80000.00, 100),
-(56, 13, 'S', 25000.00, 199),
-(57, 13, 'M', 30000.00, 200),
+(56, 13, 'S', 25000.00, 197),
+(57, 13, 'M', 30000.00, 198),
 (58, 14, 'M', 30000.00, 200),
 (59, 14, 'L', 35000.00, 200),
 (60, 15, 'M', 30000.00, 200),
 (61, 15, 'L', 35000.00, 200),
 (62, 16, '500ml', 20000.00, 200),
-(63, 17, 'Combo', 69000.00, 100),
-(64, 18, 'Combo', 95000.00, 100),
+(63, 17, 'Combo', 69000.00, 96),
+(64, 18, 'Combo', 95000.00, 97),
 (65, 11, 'L', 70000.00, 200),
 (66, 13, 'L', 35000.00, 100);
 
@@ -249,7 +261,10 @@ INSERT INTO `payments` (`id`, `payment_method`, `transaction_code`, `amount`, `s
 (5, 'momo', 'MOMO12345678', 320000.00, 'failed', '2026-07-23 13:10:00'),
 (6, 'vnpay', '15650119', 57000.00, 'completed', '2026-08-07 20:06:16'),
 (7, 'vnpay', '15650121', 414000.00, 'completed', '2026-08-07 20:18:14'),
-(8, 'vnpay', '15650122', 298000.00, 'failed', '2026-08-07 20:21:15');
+(8, 'vnpay', '15650122', 298000.00, 'failed', '2026-08-07 20:21:15'),
+(9, 'vnpay', '15650128', 774000.00, 'completed', '2026-08-07 21:04:12'),
+(10, 'vnpay', '15650131', 458000.00, 'completed', '2026-08-07 23:12:43'),
+(11, 'vnpay', '15650136', 278000.00, 'completed', '2026-08-08 00:14:08');
 
 -- --------------------------------------------------------
 
@@ -1759,7 +1774,6 @@ CREATE TABLE `tickets` (
   `id` int NOT NULL,
   `booking_id` int NOT NULL,
   `seat_id` int NOT NULL,
-  `ticket_code` varchar(100) DEFAULT NULL,
   `price` decimal(10,2) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
@@ -1767,23 +1781,30 @@ CREATE TABLE `tickets` (
 -- Dumping data for table `tickets`
 --
 
-INSERT INTO `tickets` (`id`, `booking_id`, `seat_id`, `ticket_code`, `price`) VALUES
-(74, 13, 1892, 'PET202608040001-T01', 53000.00),
-(75, 13, 1893, 'PET202608040001-T02', 53000.00),
-(76, 14, 1897, 'PET202608060001-T01', 53000.00),
-(77, 14, 1896, 'PET202608060001-T02', 53000.00),
-(78, 14, 1895, 'PET202608060001-T03', 53000.00),
-(79, 15, 1946, 'PET202608060002-T01', 63000.00),
-(80, 15, 1947, 'PET202608060002-T02', 63000.00),
-(81, 16, 1772, 'PET202608060003-T01', 140000.00),
-(82, 16, 1773, 'PET202608060003-T02', 140000.00),
-(83, 17, 1907, NULL, 57000.00),
-(84, 18, 2106, NULL, 172000.00),
-(85, 18, 2107, NULL, 172000.00),
-(86, 19, 1905, NULL, 57000.00),
-(87, 19, 1906, NULL, 57000.00),
-(88, 19, 1915, NULL, 57000.00),
-(89, 19, 1916, NULL, 57000.00);
+INSERT INTO `tickets` (`id`, `booking_id`, `seat_id`, `price`) VALUES
+(74, 13, 1892, 53000.00),
+(75, 13, 1893, 53000.00),
+(76, 14, 1897, 53000.00),
+(77, 14, 1896, 53000.00),
+(78, 14, 1895, 53000.00),
+(79, 15, 1946, 63000.00),
+(80, 15, 1947, 63000.00),
+(81, 16, 1772, 140000.00),
+(82, 16, 1773, 140000.00),
+(83, 17, 1907, 57000.00),
+(84, 18, 2106, 172000.00),
+(85, 18, 2107, 172000.00),
+(86, 19, 1905, 57000.00),
+(87, 19, 1906, 57000.00),
+(88, 19, 1915, 57000.00),
+(89, 19, 1916, 57000.00),
+(90, 20, 1908, 57000.00),
+(91, 22, 1905, 57000.00),
+(92, 22, 1906, 57000.00),
+(93, 22, 1988, 172000.00),
+(94, 22, 1989, 172000.00),
+(95, 23, 1916, 57000.00),
+(96, 23, 1917, 57000.00);
 
 -- --------------------------------------------------------
 
@@ -1906,7 +1927,6 @@ ALTER TABLE `showtimes`
 --
 ALTER TABLE `tickets`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `ticket_code` (`ticket_code`),
   ADD KEY `fk_ticket_booking` (`booking_id`),
   ADD KEY `fk_ticket_seat` (`seat_id`);
 
@@ -1925,7 +1945,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `bookings`
 --
 ALTER TABLE `bookings`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- AUTO_INCREMENT for table `foods`
@@ -1937,7 +1957,7 @@ ALTER TABLE `foods`
 -- AUTO_INCREMENT for table `food_orders`
 --
 ALTER TABLE `food_orders`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- AUTO_INCREMENT for table `food_variants`
@@ -1955,7 +1975,7 @@ ALTER TABLE `movies`
 -- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `rooms`
@@ -1991,7 +2011,7 @@ ALTER TABLE `showtimes`
 -- AUTO_INCREMENT for table `tickets`
 --
 ALTER TABLE `tickets`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=90;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=97;
 
 --
 -- AUTO_INCREMENT for table `users`
