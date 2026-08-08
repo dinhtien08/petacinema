@@ -2,154 +2,247 @@
 
 class DashboardModel extends BaseModel
 {
-    public function countUsers()
+    private function scalar(string $sql, array $params = [], $default = 0)
+    {
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        $value = $stmt->fetchColumn();
+
+        return ($value !== false && $value !== null) ? $value : $default;
+    }
+
+    private function rows(string $sql, array $params = []): array
+    {
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function countUsers(?string $from = null, ?string $to = null): int
     {
         $sql = "SELECT COUNT(*) FROM users";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute();
-        return $stmt->fetchColumn();
+        $params = [];
+
+        if ($from !== null && $to !== null) {
+            $sql .= " WHERE created_at BETWEEN ? AND ?";
+            $params = [$from, $to];
+        }
+
+        return (int) $this->scalar($sql, $params);
     }
 
-    public function countMovies()
+    public function countMovies(): int
     {
-        $sql = "SELECT COUNT(*) FROM movies";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute();
-        return $stmt->fetchColumn();
+        return (int) $this->scalar("SELECT COUNT(*) FROM movies");
     }
 
-    public function countBookings()
+    public function countBookings(?string $from = null, ?string $to = null): int
     {
         $sql = "SELECT COUNT(*) FROM bookings";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute();
-        return $stmt->fetchColumn();
+        $params = [];
+
+        if ($from !== null && $to !== null) {
+            $sql .= " WHERE created_at BETWEEN ? AND ?";
+            $params = [$from, $to];
+        }
+
+        return (int) $this->scalar($sql, $params);
     }
 
-    public function countRooms()
+    public function countRooms(): int
     {
-        $sql = "SELECT COUNT(*) FROM rooms";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute();
-        return $stmt->fetchColumn();
+        return (int) $this->scalar("SELECT COUNT(*) FROM rooms");
     }
 
-    public function countFoods()
+    public function countSeats(): int
     {
-        $sql = "SELECT COUNT(*) FROM foods";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute();
-        return $stmt->fetchColumn();
+        return (int) $this->scalar("SELECT COUNT(*) FROM seats");
     }
 
-    public function totalRevenue()
+    public function countFoods(): int
     {
-        $sql = "SELECT SUM(total_amount)
-                FROM bookings
-                WHERE status='paid'";
-
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute();
-
-        return $stmt->fetchColumn() ?? 0;
+        return (int) $this->scalar("SELECT COUNT(*) FROM foods");
     }
 
-    public function recentBookings()
-{
-    $sql = "
-        SELECT
-            b.booking_code,
-            u.fullname AS customer_name,
-            m.title AS movie_title,
-            CONCAT(
-                DATE_FORMAT(s.start_time, '%d/%m/%Y %H:%i'),
-                ' - ',
-                DATE_FORMAT(s.end_time, '%H:%i')
-            ) AS showtime_at,
-            GROUP_CONCAT(se.seat_number ORDER BY se.seat_number SEPARATOR ', ') AS seat_labels,
-            b.total_amount,
-            b.status,
-            b.created_at
+    public function countPayments(?string $from = null, ?string $to = null): int
+    {
+        $sql = "SELECT COUNT(*) FROM payments";
+        $params = [];
 
-        FROM bookings b
+        if ($from !== null && $to !== null) {
+            $sql .= " WHERE payment_time BETWEEN ? AND ?";
+            $params = [$from, $to];
+        }
 
-        LEFT JOIN users u
-            ON b.user_id = u.id
+        return (int) $this->scalar($sql, $params);
+    }
 
-        LEFT JOIN showtimes s
-            ON b.showtime_id = s.id
-
-        LEFT JOIN movies m
-            ON s.movie_id = m.id
-
-        LEFT JOIN tickets t
-            ON b.id = t.booking_id
-
-        LEFT JOIN seats se
-            ON t.seat_id = se.id
-
-        GROUP BY
-            b.id,
-            b.booking_code,
-            u.fullname,
-            m.title,
-            s.start_time,
-            s.end_time,
-            b.total_amount,
-            b.status,
-            b.created_at
-
-        ORDER BY b.created_at DESC
-
-        LIMIT 5
-    ";
-
-    $stmt = $this->pdo->prepare($sql);
-    $stmt->execute();
-
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
-}
-
-    public function topMovies()
+    public function countTickets(?string $from = null, ?string $to = null): int
     {
         $sql = "
-            SELECT
-                movies.title,
-                COUNT(bookings.id) AS total
-            FROM movies
-
-            LEFT JOIN showtimes
-                ON movies.id = showtimes.movie_id
-
-            LEFT JOIN bookings
-                ON showtimes.id = bookings.showtime_id
-
-            GROUP BY movies.id
-
-            ORDER BY total DESC
-
-            LIMIT 5
+            SELECT COUNT(t.id)
+            FROM tickets t
+            INNER JOIN bookings b ON b.id = t.booking_id
+            WHERE b.status = 'paid'
         ";
+        $params = [];
 
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute();
+        if ($from !== null && $to !== null) {
+            $sql .= " AND b.created_at BETWEEN ? AND ?";
+            $params = [$from, $to];
+        }
 
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return (int) $this->scalar($sql, $params);
     }
 
-    public function bookingStatus()
+    public function countShowtimes(?string $from = null, ?string $to = null): int
     {
+        $sql = "SELECT COUNT(*) FROM showtimes";
+        $params = [];
+
+        if ($from !== null && $to !== null) {
+            $sql .= " WHERE start_time BETWEEN ? AND ?";
+            $params = [$from, $to];
+        }
+
+        return (int) $this->scalar($sql, $params);
+    }
+
+    public function totalRevenue(?string $from = null, ?string $to = null): float
+    {
+        $sql = "SELECT COALESCE(SUM(total_amount), 0) FROM bookings WHERE status = 'paid'";
+        $params = [];
+
+        if ($from !== null && $to !== null) {
+            $sql .= " AND created_at BETWEEN ? AND ?";
+            $params = [$from, $to];
+        }
+
+        return (float) $this->scalar($sql, $params, 0);
+    }
+
+    public function bookingStatus(?string $from = null, ?string $to = null): array
+    {
+        $sql = "SELECT status, COUNT(*) AS total FROM bookings";
+        $params = [];
+
+        if ($from !== null && $to !== null) {
+            $sql .= " WHERE created_at BETWEEN ? AND ?";
+            $params = [$from, $to];
+        }
+
+        $sql .= " GROUP BY status";
+        return $this->rows($sql, $params);
+    }
+
+    public function recentBookings(int $limit = 5, ?string $from = null, ?string $to = null): array
+    {
+        $limit = max(1, min(50, $limit));
+        $where = '';
+        $params = [];
+
+        if ($from !== null && $to !== null) {
+            $where = 'WHERE b.created_at BETWEEN ? AND ?';
+            $params = [$from, $to];
+        }
+
         $sql = "
             SELECT
-                status,
-                COUNT(*) total
-            FROM bookings
-            GROUP BY status
+                b.id,
+                b.booking_code,
+                b.total_amount,
+                b.status,
+                b.checkin_status,
+                b.created_at,
+                COALESCE(u.fullname, 'Khách hàng') AS customer_name,
+                COALESCE(m.title, '—') AS movie_title,
+                st.start_time AS showtime_at,
+                COALESCE(
+                    GROUP_CONCAT(
+                        DISTINCT se.seat_number
+                        ORDER BY se.row_char, se.col_num
+                        SEPARATOR ', '
+                    ),
+                    '—'
+                ) AS seat_labels
+            FROM bookings b
+            LEFT JOIN users u ON u.id = b.user_id
+            LEFT JOIN showtimes st ON st.id = b.showtime_id
+            LEFT JOIN movies m ON m.id = st.movie_id
+            LEFT JOIN tickets t ON t.booking_id = b.id
+            LEFT JOIN seats se ON se.id = t.seat_id
+            {$where}
+            GROUP BY
+                b.id,
+                b.booking_code,
+                b.total_amount,
+                b.status,
+                b.checkin_status,
+                b.created_at,
+                u.fullname,
+                m.title,
+                st.start_time
+            ORDER BY b.created_at DESC
+            LIMIT {$limit}
         ";
 
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute();
+        return $this->rows($sql, $params);
+    }
 
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    public function revenueByMonth(int $months = 7): array
+    {
+        $months = max(1, min(24, $months));
+        $start = date('Y-m-01 00:00:00', strtotime('-' . ($months - 1) . ' months'));
+
+        return $this->rows(
+            "SELECT
+                DATE_FORMAT(created_at, '%Y-%m') AS period,
+                COALESCE(SUM(total_amount), 0) AS revenue
+             FROM bookings
+             WHERE status = 'paid'
+               AND created_at >= ?
+             GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+             ORDER BY period ASC",
+            [$start]
+        );
+    }
+
+    public function revenueByDay(string $from, string $to): array
+    {
+        return $this->rows(
+            "SELECT
+                DATE(created_at) AS period,
+                COALESCE(SUM(total_amount), 0) AS revenue
+             FROM bookings
+             WHERE status = 'paid'
+               AND created_at BETWEEN ? AND ?
+             GROUP BY DATE(created_at)
+             ORDER BY period ASC",
+            [$from, $to]
+        );
+    }
+
+    public function earliestBookingDate(): ?string
+    {
+        $date = $this->scalar("SELECT DATE(MIN(created_at)) FROM bookings", [], null);
+        return $date ? (string) $date : null;
+    }
+
+    public function topMovies(int $limit = 5): array
+    {
+        $limit = max(1, min(20, $limit));
+
+        return $this->rows("\n            SELECT
+                m.title,
+                COUNT(DISTINCT CASE WHEN b.status = 'paid' THEN b.id END) AS total_bookings,
+                COUNT(CASE WHEN b.status = 'paid' THEN t.id END) AS total_tickets
+            FROM movies m
+            LEFT JOIN showtimes st ON st.movie_id = m.id
+            LEFT JOIN bookings b ON b.showtime_id = st.id
+            LEFT JOIN tickets t ON t.booking_id = b.id
+            GROUP BY m.id, m.title
+            ORDER BY total_tickets DESC, total_bookings DESC, m.title ASC
+            LIMIT {$limit}
+        ");
     }
 }

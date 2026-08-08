@@ -551,7 +551,8 @@ class BookingModel extends BaseModel
                 INNER JOIN rooms r ON r.id = s.room_id
                 INNER JOIN room_types rt ON rt.id = r.room_type_id
                 WHERE s.id = :id
-                LIMIT 1";
+                LIMIT 1
+                FOR UPDATE";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([':id' => $showtimeId]);
         return $stmt->fetch();

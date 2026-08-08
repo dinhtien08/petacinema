@@ -10,6 +10,18 @@ class RoleMiddleware
 
         $role = $_SESSION['role'] ?? $_SESSION['user']['role'] ?? 'user';
 
+        // Admin/Staff chỉ làm việc trong khu vực quản trị tương ứng,
+        // không sử dụng giao diện khách để xem/đặt vé như một customer.
+        $customerActions = [
+            '/', 'movie_detail', 'booking_date', 'booking_checkout', 'my_tickets'
+        ];
+
+        if (in_array($action, $customerActions, true) && in_array($role, ['admin', 'staff'], true)) {
+            $targetAction = $role === 'admin' ? 'dashboard' : 'staff_dashboard';
+            header('Location: ' . BASE_URL . '?action=' . $targetAction);
+            exit;
+        }
+
         // 1. Phân quyền cho Staff (các route bắt đầu bằng staff_)
         if (strpos($action, 'staff_') === 0) {
             if ($role === 'user' || $role === 'client') {

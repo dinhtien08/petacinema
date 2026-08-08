@@ -177,6 +177,30 @@ if ($status !== '') {
 usort(
     $displayShowtimes,
     function ($first, $second) {
+
+        $firstStatus = getShowtimeStatus(
+            $first['start_time'],
+            $first['end_time']
+        );
+
+        $secondStatus = getShowtimeStatus(
+            $second['start_time'],
+            $second['end_time']
+        );
+
+        $priority = [
+            'showing'  => 1, // Đang chiếu
+            'upcoming' => 2, // Chưa chiếu
+            'ended'    => 3, // Đã chiếu
+        ];
+
+        $firstPriority = $priority[$firstStatus['value']] ?? 99;
+        $secondPriority = $priority[$secondStatus['value']] ?? 99;
+
+        if ($firstPriority !== $secondPriority) {
+            return $firstPriority <=> $secondPriority;
+        }
+
         return strtotime($first['start_time'])
             <=> strtotime($second['start_time']);
     }
@@ -188,20 +212,35 @@ usort(
 |--------------------------------------------------------------------------
 */
 
-$tomorrow = date(
+$maxSelectableDate = date(
     'Y-m-d',
-    strtotime('+1 day')
+    strtotime('+7 days')
 );
 
-$nextTwoDays = date(
-    'Y-m-d',
-    strtotime('+2 days')
-);
+$dateOptions = [];
 
-$nextThreeDays = date(
-    'Y-m-d',
-    strtotime('+3 days')
-);
+for ($dayOffset = 0; $dayOffset <= 7; $dayOffset++) {
+    $optionDate = date(
+        'Y-m-d',
+        strtotime('+' . $dayOffset . ' day')
+    );
+
+    if ($dayOffset === 0) {
+        $optionLabel = 'Hôm nay';
+    } elseif ($dayOffset === 1) {
+        $optionLabel = 'Ngày mai';
+    } else {
+        $optionLabel = date(
+            'd/m',
+            strtotime($optionDate)
+        );
+    }
+
+    $dateOptions[] = [
+        'date' => $optionDate,
+        'label' => $optionLabel,
+    ];
+}
 
 /*
 |--------------------------------------------------------------------------
@@ -439,37 +478,17 @@ foreach ($displayShowtimes as $showtime) {
                 Hiển thị từ:
             </span>
 
-            <a
-                href="<?= BASE_URL ?>?action=<?= e($currentAction) ?>&date=<?= $today ?>"
-                class="btn <?= $date === $today ? 'btn-primary' : 'btn-outline-primary' ?> btn-sm">
+            <?php foreach ($dateOptions as $dateOption): ?>
 
-                Hôm nay
+                <a
+                    href="<?= BASE_URL ?>?action=<?= e($currentAction) ?>&date=<?= e($dateOption['date']) ?>"
+                    class="btn <?= $date === $dateOption['date'] ? 'btn-primary' : 'btn-outline-primary' ?> btn-sm">
 
-            </a>
+                    <?= e($dateOption['label']) ?>
 
-            <a
-                href="<?= BASE_URL ?>?action=<?= e($currentAction) ?>&date=<?= $tomorrow ?>"
-                class="btn <?= $date === $tomorrow ? 'btn-primary' : 'btn-outline-primary' ?> btn-sm">
+                </a>
 
-                Ngày mai
-
-            </a>
-
-            <a
-                href="<?= BASE_URL ?>?action=<?= e($currentAction) ?>&date=<?= $nextTwoDays ?>"
-                class="btn <?= $date === $nextTwoDays ? 'btn-primary' : 'btn-outline-primary' ?> btn-sm">
-
-                <?= date('d/m', strtotime($nextTwoDays)) ?>
-
-            </a>
-
-            <a
-                href="<?= BASE_URL ?>?action=<?= e($currentAction) ?>&date=<?= $nextThreeDays ?>"
-                class="btn <?= $date === $nextThreeDays ? 'btn-primary' : 'btn-outline-primary' ?> btn-sm">
-
-                <?= date('d/m', strtotime($nextThreeDays)) ?>
-
-            </a>
+            <?php endforeach; ?>
 
         </div>
 
@@ -633,6 +652,7 @@ foreach ($displayShowtimes as $showtime) {
                     name="date"
                     class="form-control"
                     min="<?= $today ?>"
+                    max="<?= $maxSelectableDate ?>"
                     value="<?= e($date) ?>">
 
             </div>

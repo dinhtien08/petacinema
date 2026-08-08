@@ -1,5 +1,7 @@
 <?php
 $currentAction = $_GET['action'] ?? '';
+$isFoodDeliveryAction = in_array($currentAction, ['staff_food_delivery', 'staff_food_delivery_confirm', 'staff_food_order_list'], true);
+$isFoodServiceAction = in_array($currentAction, ['staff_food_list', 'staff_food_variant_list'], true);
 ?>
 <aside class="sidebar">
 
@@ -54,7 +56,7 @@ $currentAction = $_GET['action'] ?? '';
             Check-in
         </a>
         
-        <a href="?action=staff_food_delivery" class="<?= ($currentAction === 'staff_food_delivery') ? 'active' : '' ?>">
+        <a href="?action=staff_food_delivery" class="<?= $isFoodDeliveryAction ? 'active' : '' ?>">
             <i class="bi bi-box-seam"></i>
             Giao đồ ăn
         </a>
@@ -69,7 +71,7 @@ $currentAction = $_GET['action'] ?? '';
 
         <small class="menu-title">SERVICE</small>
 
-        <a href="?action=staff_food_list" class="<?= (strpos($currentAction, 'staff_food') === 0) ? 'active' : '' ?>">
+        <a href="?action=staff_food_list" class="<?= $isFoodServiceAction ? 'active' : '' ?>">
             <i class="bi bi-cup-hot"></i>
             Foods
         </a>
