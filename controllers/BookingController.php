@@ -155,7 +155,8 @@ class BookingController
         unset($booking);
 
         $title = 'Vé của tôi | Petacinema';
-        $view = 'my_tickets';
+        $view = 'account_layout';
+        $accountView = 'my_tickets';
         require_once PATH_VIEW . 'main.php';
     }
 

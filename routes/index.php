@@ -12,6 +12,13 @@ match ($action) {
     'movie_detail'  => (new HomeController)->movieDetail(),
     'booking_date'  => (new HomeController)->bookingDate(),
     'booking_checkout' => (new BookingController)->checkout(),
+    
+    // Account Routes
+    'account'         => (new AccountController)->profile(),
+    'accountPost'     => (new AccountController)->profilePost(),
+    'change_password' => (new AccountController)->changePassword(),
+    'changePasswordPost' => (new AccountController)->changePasswordPost(),
+    
     'my_tickets'      => (new BookingController)->myTickets(),
     'vnpay_return' => (new PaymentController)->vnpayReturn(),
     'vnpay_ipn' => (new PaymentController)->vnpayIpn(),

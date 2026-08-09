@@ -3,7 +3,7 @@ $bookings = $bookings ?? [];
 ?>
 
 <style>
-    .my-ticket-page { max-width: 980px; margin: 0 auto 3rem; }
+    .my-ticket-page { width: 100%; }
     .my-ticket-heading { font-weight: 800; letter-spacing: -.02em; }
     .my-ticket-card { border: 1px solid #e2e8f0; border-radius: 16px; background: #fff; overflow: hidden; box-shadow: 0 6px 18px rgba(15, 23, 42, .06); }
     .my-ticket-poster { width: 132px; min-width: 132px; aspect-ratio: 2 / 3; object-fit: cover; background: #e2e8f0; }

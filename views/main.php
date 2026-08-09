@@ -441,10 +441,19 @@
                     <!-- User Account Actions -->
                     <div class="d-flex align-items-center gap-2 mt-3 mt-lg-0">
                         <?php if (isset($_SESSION['user'])): ?>
-                            <span class="text-dark fw-bold small me-2">
-                                <i class="bi bi-person-circle text-danger me-1 fs-6"></i> <?= h($_SESSION['user']['fullname'] ?? 'Thành viên') ?>
-                            </span>
-                            <a class="btn btn-sm btn-outline-dark fw-semibold" href="<?= BASE_URL ?>?action=logout">Đăng xuất</a>
+                            <div class="dropdown">
+                                <a href="#" class="d-flex align-items-center text-decoration-none text-dark fw-bold small dropdown-toggle" id="accountDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bi bi-person-circle text-danger me-1 fs-5"></i> 
+                                    <?= h($_SESSION['user']['fullname'] ?? 'Thành viên') ?>
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2" aria-labelledby="accountDropdown">
+                                    <li><a class="dropdown-item py-2 fw-semibold" href="<?= BASE_URL ?>?action=account"><i class="bi bi-person me-2 text-secondary"></i>Thông tin tài khoản</a></li>
+                                    <li><a class="dropdown-item py-2 fw-semibold" href="<?= BASE_URL ?>?action=change_password"><i class="bi bi-shield-lock me-2 text-secondary"></i>Đổi mật khẩu</a></li>
+                                    <li><a class="dropdown-item py-2 fw-semibold" href="<?= BASE_URL ?>?action=my_tickets"><i class="bi bi-ticket-perforated me-2 text-secondary"></i>Vé của tôi</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item py-2 fw-semibold text-danger" href="<?= BASE_URL ?>?action=logout"><i class="bi bi-box-arrow-right me-2"></i>Đăng xuất</a></li>
+                                </ul>
+                            </div>
                         <?php else: ?>
                             <a class="btn btn-sm btn-outline-danger fw-bold px-3 py-2" href="<?= BASE_URL ?>?action=login">Đăng nhập</a>
                             <a class="btn btn-sm btn-peta fw-bold px-3 py-2" href="<?= BASE_URL ?>?action=register">Đăng ký</a>
