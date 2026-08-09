@@ -303,15 +303,19 @@ foreach ($displayShowtimes as $showtime) {
 
     <?php
     $errorMessages = [
-        'invalid_method' => 'Phương thức xóa không hợp lệ.',
+        'invalid_method' => 'Phương thức thao tác không hợp lệ.',
         'invalid_id'     => 'Mã suất chiếu không hợp lệ.',
         'not_found'      => 'Không tìm thấy suất chiếu.',
-        'has_booking'    => 'Không thể xóa vì suất chiếu đã có người đặt vé.',
+        'edit_locked'    => 'Không thể chỉnh sửa suất chiếu vì đang có vé đã thanh toán hoặc booking đang trong thời gian giữ ghế.',
+        'delete_locked'  => 'Không thể xóa suất chiếu vì đã có dữ liệu booking liên quan.',
+        'has_booking'    => 'Không thể xóa suất chiếu vì đã có dữ liệu booking liên quan.',
         'delete_failed'  => 'Xóa suất chiếu thất bại. Vui lòng thử lại.',
+        // Tương thích link/error cũ nếu còn tồn tại.
+        'locked'         => 'Suất chiếu đang có booking còn hiệu lực nên không thể thực hiện thao tác này.',
     ];
 
     $errorMessage = $errorMessages[$error]
-        ?? 'Đã xảy ra lỗi trong quá trình xóa.';
+        ?? 'Đã xảy ra lỗi khi xử lý suất chiếu.';
     ?>
 
     <div
@@ -813,6 +817,9 @@ foreach ($displayShowtimes as $showtime) {
                                 $showtime['total_seats'] ?? 0
                             );
 
+                            $hasActiveBooking = (bool)($showtime['has_active_booking'] ?? false);
+                            $hasAnyBooking = (bool)($showtime['has_booking'] ?? false);
+
                             $rowClass = $showtimeStatus['value'] === 'ended'
                                 ? 'table-light'
                                 : '';
@@ -960,24 +967,56 @@ foreach ($displayShowtimes as $showtime) {
 
                                         <?php if ($showtimeStatus['value'] === 'upcoming'): ?>
 
-                                            <a
-                                                href="<?= BASE_URL ?>?action=showtime_edit&id=<?= (int)$showtime['id'] ?>"
-                                                class="btn btn-warning btn-sm"
-                                                title="Chỉnh sửa">
+                                            <?php if ($hasActiveBooking): ?>
 
-                                                <i class="bi bi-pencil-square"></i>
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-warning btn-sm"
+                                                    title="Không thể chỉnh sửa: đang có vé đã thanh toán hoặc booking còn thời gian giữ ghế"
+                                                    disabled>
 
-                                            </a>
+                                                    <i class="bi bi-pencil-square"></i>
 
-                                            <a
-                                                href="<?= BASE_URL ?>?action=showtime_delete&id=<?= (int)$showtime['id'] ?>"
-                                                class="btn btn-danger btn-sm"
-                                                title="Xóa suất chiếu"
-                                                onclick="return confirm('Bạn có chắc chắn muốn xóa suất chiếu này?')">
+                                                </button>
 
-                                                <i class="bi bi-trash"></i>
+                                            <?php else: ?>
 
-                                            </a>
+                                                <a
+                                                    href="<?= BASE_URL ?>?action=showtime_edit&id=<?= (int)$showtime['id'] ?>"
+                                                    class="btn btn-warning btn-sm"
+                                                    title="Chỉnh sửa">
+
+                                                    <i class="bi bi-pencil-square"></i>
+
+                                                </a>
+
+                                            <?php endif; ?>
+
+                                            <?php if ($hasAnyBooking): ?>
+
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-danger btn-sm"
+                                                    title="Không thể xóa: suất chiếu đã có dữ liệu booking liên quan"
+                                                    disabled>
+
+                                                    <i class="bi bi-trash"></i>
+
+                                                </button>
+
+                                            <?php else: ?>
+
+                                                <a
+                                                    href="<?= BASE_URL ?>?action=showtime_delete&id=<?= (int)$showtime['id'] ?>"
+                                                    class="btn btn-danger btn-sm"
+                                                    title="Xóa suất chiếu"
+                                                    onclick="return confirm('Bạn có chắc chắn muốn xóa suất chiếu này?')">
+
+                                                    <i class="bi bi-trash"></i>
+
+                                                </a>
+
+                                            <?php endif; ?>
 
                                         <?php endif; ?>
 

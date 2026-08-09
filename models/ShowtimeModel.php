@@ -105,10 +105,16 @@ class ShowtimeModel extends BaseModel
     }
 
     /**
-     * Cập nhật suất chiếu chỉ khi chưa phát sinh bất kỳ booking nào.
-     * Khóa row showtime để tránh race condition với luồng tạo booking.
+     * Cập nhật suất chiếu chỉ khi không có booking còn hiệu lực.
+     *
+     * Booking được xem là còn hiệu lực khi:
+     * - đã thanh toán (paid), hoặc
+     * - đang pending và vẫn còn trong thời gian giữ ghế.
+     *
+     * Booking pending đã hết hạn / cancelled không khóa chỉnh sửa suất chiếu.
+     * Row showtime vẫn được khóa để tránh race condition với luồng checkout.
      */
-    public function updateIfNoBooking($id, array $data): bool
+    public function updateIfNoActiveBooking($id, array $data): bool
     {
         $startedTransaction = !$this->pdo->inTransaction();
 
@@ -129,8 +135,19 @@ class ShowtimeModel extends BaseModel
                 return false;
             }
 
+            $holdMinutes = $this->getBookingHoldMinutes();
             $bookingStmt = $this->pdo->prepare(
-                "SELECT 1 FROM bookings WHERE showtime_id = :showtime_id LIMIT 1"
+                "SELECT 1
+                 FROM bookings
+                 WHERE showtime_id = :showtime_id
+                   AND (
+                       status = 'paid'
+                       OR (
+                           status = 'pending'
+                           AND created_at > DATE_SUB(NOW(), INTERVAL {$holdMinutes} MINUTE)
+                       )
+                   )
+                 LIMIT 1"
             );
             $bookingStmt->execute([':showtime_id' => (int) $id]);
 
@@ -301,7 +318,37 @@ class ShowtimeModel extends BaseModel
         }
     }
      /**
-     * Kiểm tra đã có booking chưa
+     * Kiểm tra suất chiếu có booking còn hiệu lực hay không.
+     * Dùng cho nghiệp vụ chỉnh sửa suất chiếu.
+     *
+     * Pending chỉ khóa trong thời gian giữ ghế; khi hết hạn thì không còn khóa edit.
+     */
+    public function hasActiveBooking($showtimeId): bool
+    {
+        $holdMinutes = $this->getBookingHoldMinutes();
+
+        $sql = "SELECT 1
+                FROM bookings
+                WHERE showtime_id = :showtime_id
+                  AND (
+                      status = 'paid'
+                      OR (
+                          status = 'pending'
+                          AND created_at > DATE_SUB(NOW(), INTERVAL {$holdMinutes} MINUTE)
+                      )
+                  )
+                LIMIT 1";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->bindValue(':showtime_id', (int) $showtimeId, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return (bool) $stmt->fetchColumn();
+    }
+
+    /**
+     * Kiểm tra đã từng có bất kỳ booking nào chưa.
+     * Dùng cho xóa suất chiếu để bảo toàn foreign key và lịch sử booking.
      */
     public function hasBooking($showtimeId)
     {
@@ -324,8 +371,22 @@ class ShowtimeModel extends BaseModel
         return (int) $stmt->fetchColumn() > 0;
     }
 
+    /**
+     * Thời gian giữ booking pending, dùng chung với timeout thanh toán VNPAY.
+     */
+    private function getBookingHoldMinutes(): int
+    {
+        $minutes = defined('VNPAY_PAYMENT_TIMEOUT_MINUTES')
+            ? (int) VNPAY_PAYMENT_TIMEOUT_MINUTES
+            : 5;
+
+        return max(1, $minutes);
+    }
+
     public function searchAndFilter($keyword = null, $movieId = null, $roomId = null, $status = null, $date = null)
     {
+        $holdMinutes = $this->getBookingHoldMinutes();
+
         $sql = "SELECT
                     s.id,
                     s.movie_id,
@@ -341,6 +402,18 @@ class ShowtimeModel extends BaseModel
                         FROM bookings bx
                         WHERE bx.showtime_id = s.id
                     ) AS has_booking,
+                    EXISTS(
+                        SELECT 1
+                        FROM bookings ba
+                        WHERE ba.showtime_id = s.id
+                          AND (
+                              ba.status = 'paid'
+                              OR (
+                                  ba.status = 'pending'
+                                  AND ba.created_at > DATE_SUB(NOW(), INTERVAL {$holdMinutes} MINUTE)
+                              )
+                          )
+                    ) AS has_active_booking,
                     (
                         SELECT COUNT(DISTINCT t.seat_id)
                         FROM tickets t
@@ -350,7 +423,7 @@ class ShowtimeModel extends BaseModel
                               b.status = 'paid'
                               OR (
                                   b.status = 'pending'
-                                  AND b.created_at > DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+                                  AND b.created_at > DATE_SUB(NOW(), INTERVAL {$holdMinutes} MINUTE)
                               )
                           )
                     ) AS booked_seats
