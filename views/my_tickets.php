@@ -48,13 +48,21 @@ $bookings = $bookings ?? [];
                 }
 
                 $ticketCount = (int) ($booking['ticket_count'] ?? 0);
-                $isCheckedIn = ($booking['checkin_status'] ?? 'pending') === 'checked_in';
-                $checkinText = $isCheckedIn ? 'Đã check-in' : 'Chưa check-in';
-                $checkinIcon = $isCheckedIn
-                    ? 'bi-check-circle-fill text-success'
-                    : 'bi-clock text-secondary';
+                $checkInState = booking_checkin_state($booking);
+                $isCheckedIn = $checkInState === 'checked_in';
+                $checkinText = match ($checkInState) {
+                    'checked_in' => 'Đã check-in',
+                    'expired' => 'Quá hạn check-in',
+                    default => 'Chưa check-in',
+                };
+                $checkinIcon = match ($checkInState) {
+                    'checked_in' => 'bi-check-circle-fill text-success',
+                    'expired' => 'bi-clock-history text-danger',
+                    default => 'bi-clock text-secondary',
+                };
 
                 $foods = $booking['foods'] ?? [];
+                $foodDeliveryExpired = booking_food_delivery_expired($booking);
                 $foodTotal = 0;
                 foreach ($foods as $food) {
                     $foodTotal += (float) ($food['price_at_booking'] ?? 0) * (int) ($food['quantity'] ?? 0);
@@ -122,6 +130,13 @@ $bookings = $bookings ?? [];
                                                 <?= h($food['food_name']) ?>
                                                 <?= !empty($food['variant_size']) ? ' (' . h($food['variant_size']) . ')' : '' ?>
                                                 × <?= (int) $food['quantity'] ?>
+                                                <?php if (($food['delivery_status'] ?? 'pending') === 'delivered'): ?>
+                                                    <span class="badge text-bg-success ms-1">Đã giao</span>
+                                                <?php elseif ($foodDeliveryExpired): ?>
+                                                    <span class="badge text-bg-danger ms-1">Quá hạn giao</span>
+                                                <?php else: ?>
+                                                    <span class="badge text-bg-warning ms-1">Chờ giao</span>
+                                                <?php endif; ?>
                                             </li>
                                         <?php endforeach; ?>
                                     </ul>

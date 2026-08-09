@@ -33,6 +33,10 @@ define('DB_OPTIONS', [
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
 ]);
 define('SHOWTIME_CLEANING_TIME', 20);
+
+// Nghiệp vụ check-in: cho phép check-in đến 30 phút sau giờ bắt đầu suất chiếu.
+define('CHECKIN_GRACE_MINUTES', 30);
+
 date_default_timezone_set('Asia/Ho_Chi_Minh');
 
 // VNPay Sandbox

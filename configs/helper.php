@@ -90,3 +90,61 @@ if (!function_exists('field_error')) {
         return '';
     }
 }
+if (!function_exists('booking_checkin_deadline')) {
+    /**
+     * Thời điểm cuối được check-in: giờ bắt đầu suất chiếu + số phút gia hạn.
+     */
+    function booking_checkin_deadline(array $booking): ?int
+    {
+        $startTime = $booking['start_time'] ?? $booking['showtime_at'] ?? null;
+        if (empty($startTime)) {
+            return null;
+        }
+
+        $timestamp = strtotime((string) $startTime);
+        if ($timestamp === false) {
+            return null;
+        }
+
+        $graceMinutes = defined('CHECKIN_GRACE_MINUTES')
+            ? max(0, (int) CHECKIN_GRACE_MINUTES)
+            : 30;
+
+        return $timestamp + ($graceMinutes * 60);
+    }
+}
+
+if (!function_exists('booking_checkin_state')) {
+    /**
+     * Trạng thái hiển thị của check-in.
+     * Không ghi "expired" xuống DB vì đây là trạng thái phụ thuộc thời gian.
+     */
+    function booking_checkin_state(array $booking): string
+    {
+        if (($booking['checkin_status'] ?? 'pending') === 'checked_in') {
+            return 'checked_in';
+        }
+
+        $deadline = booking_checkin_deadline($booking);
+        if ($deadline !== null && time() > $deadline) {
+            return 'expired';
+        }
+
+        return 'pending';
+    }
+}
+
+if (!function_exists('booking_food_delivery_expired')) {
+    /**
+     * Đồ ăn được phép giao đến hết giờ kết thúc suất chiếu.
+     */
+    function booking_food_delivery_expired(array $booking): bool
+    {
+        if (empty($booking['end_time'])) {
+            return false;
+        }
+
+        $endTimestamp = strtotime((string) $booking['end_time']);
+        return $endTimestamp !== false && time() > $endTimestamp;
+    }
+}

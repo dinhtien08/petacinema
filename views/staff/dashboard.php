@@ -79,6 +79,7 @@ $statCards = [
 .badge-cancelled { background:#fee2e2; color:#b91c1c; }
 .checkin-ok { background:#dbeafe; color:#1d4ed8; }
 .checkin-wait { background:#f3f4f6; color:#6b7280; }
+.checkin-expired { background:#fee2e2; color:#b91c1c; }
 @media(max-width:991px){ .dashboard-header,.welcome-banner{align-items:flex-start;flex-direction:column}.status-layout{flex-direction:column;align-items:stretch}.status-chart-wrap{margin:0 auto} }
 </style>
 
@@ -190,8 +191,11 @@ $statCards = [
                                 <td><?= number_format((float) $booking['total_amount']) ?>đ</td>
                                 <td><span class="status-badge <?= h($meta['class']) ?>"><?= h($meta['label']) ?></span></td>
                                 <td>
-                                    <?php if (($booking['checkin_status'] ?? 'pending') === 'checked_in'): ?>
+                                    <?php $checkInState = booking_checkin_state($booking); ?>
+                                    <?php if ($checkInState === 'checked_in'): ?>
                                         <span class="checkin-badge checkin-ok"><i class="bi bi-check-circle me-1"></i>Đã check-in</span>
+                                    <?php elseif ($checkInState === 'expired'): ?>
+                                        <span class="checkin-badge checkin-expired"><i class="bi bi-clock-history me-1"></i>Quá hạn</span>
                                     <?php else: ?>
                                         <span class="checkin-badge checkin-wait">Chưa check-in</span>
                                     <?php endif; ?>

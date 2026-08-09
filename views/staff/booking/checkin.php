@@ -5,7 +5,7 @@
                 <i class="bi bi-qr-code-scan me-2 text-primary"></i> Check-in
             </h4>
             <p class="text-muted mb-0">
-                Nhập hoặc quét mã Booking để tiếp tục.
+                Nhập hoặc quét mã Booking. Check-in hợp lệ đến <?= (int) (defined('CHECKIN_GRACE_MINUTES') ? CHECKIN_GRACE_MINUTES : 30) ?> phút sau giờ bắt đầu suất chiếu.
             </p>
         </div>
         <a href="?action=staff_booking_list" class="btn btn-outline-secondary">

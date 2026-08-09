@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Aug 08, 2026 at 12:25 AM
+-- Generation Time: Aug 09, 2026 at 01:33 PM
 -- Server version: 8.0.30
 -- PHP Version: 8.1.10
 
@@ -36,7 +36,7 @@ CREATE TABLE `bookings` (
   `total_amount` decimal(10,2) DEFAULT NULL,
   `status` enum('pending','paid','cancelled') DEFAULT 'pending',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `checkin_status` varchar(20) NOT NULL DEFAULT 'pending',
+  `checkin_status` enum('pending','checked_in') NOT NULL DEFAULT 'pending',
   `checked_in_at` datetime DEFAULT NULL,
   `checked_in_by` int DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -46,16 +46,18 @@ CREATE TABLE `bookings` (
 --
 
 INSERT INTO `bookings` (`id`, `booking_code`, `user_id`, `showtime_id`, `payment_id`, `total_amount`, `status`, `created_at`, `checkin_status`, `checked_in_at`, `checked_in_by`) VALUES
-(13, 'PET202608040001', 5, 22, NULL, 136000.00, 'paid', '2026-08-04 01:13:57', 'pending', NULL, NULL),
-(14, 'PET202608060001', 2, 22, NULL, 189000.00, 'paid', '2026-08-06 15:51:35', 'pending', NULL, NULL),
-(15, 'PET202608060002', 1, 22, NULL, 126000.00, 'paid', '2026-08-06 16:02:50', 'pending', NULL, NULL),
+(13, 'PET202608040001', 5, 22, NULL, 136000.00, 'paid', '2026-08-04 01:13:57', 'checked_in', '2026-08-08 10:58:36', 2),
+(14, 'PET202608060001', 2, 22, NULL, 189000.00, 'paid', '2026-08-06 15:51:35', 'checked_in', '2026-08-08 11:04:27', 2),
+(15, 'PET202608060002', 1, 22, NULL, 126000.00, 'paid', '2026-08-06 16:02:50', 'checked_in', '2026-08-09 19:21:39', 2),
 (16, 'PET202608060003', 3, 25, NULL, 280000.00, 'paid', '2026-08-06 16:32:02', 'pending', NULL, NULL),
-(17, 'PET202608080017', 9, 28, 6, 57000.00, 'paid', '2026-08-07 20:03:55', 'pending', NULL, NULL),
+(17, 'PET202608080017', 9, 28, 6, 57000.00, 'paid', '2026-08-07 20:03:55', 'checked_in', '2026-08-08 17:28:09', 2),
 (18, 'PET202608080018', 9, 38, 7, 414000.00, 'paid', '2026-08-07 20:17:40', 'checked_in', NULL, NULL),
 (19, 'PET202608080019', 9, 28, 8, 298000.00, 'cancelled', '2026-08-07 20:20:42', 'pending', NULL, NULL),
-(20, 'PET202608080020', 9, 28, 9, 774000.00, 'paid', '2026-08-07 21:03:46', 'pending', NULL, NULL),
-(22, 'PET202608080022', 9, 28, 10, 458000.00, 'paid', '2026-08-07 23:11:01', 'pending', NULL, NULL),
-(23, 'PET202608080023', 9, 28, 11, 278000.00, 'paid', '2026-08-08 00:13:19', 'pending', NULL, NULL);
+(20, 'PET202608080020', 9, 28, 9, 774000.00, 'paid', '2026-08-07 21:03:46', 'checked_in', '2026-08-08 16:42:06', 2),
+(22, 'PET202608080022', 9, 28, 10, 458000.00, 'paid', '2026-08-07 23:11:01', 'checked_in', '2026-08-08 10:58:55', 2),
+(23, 'PET202608080023', 9, 28, 11, 278000.00, 'paid', '2026-08-08 00:13:19', 'checked_in', '2026-08-08 10:16:34', 2),
+(24, 'PET202608080024', 9, 38, 12, 229000.00, 'cancelled', '2026-08-08 02:51:05', 'pending', NULL, NULL),
+(25, 'PET202608080025', 9, 38, 13, 209000.00, 'paid', '2026-08-08 11:21:00', 'pending', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -107,20 +109,22 @@ CREATE TABLE `food_orders` (
 --
 
 INSERT INTO `food_orders` (`id`, `booking_id`, `food_variant_id`, `quantity`, `price_at_booking`, `delivered_at`, `delivered_by`, `delivery_status`) VALUES
-(10, 13, 60, 1, 30000.00, NULL, NULL, 'pending'),
-(11, 14, 60, 1, 30000.00, NULL, NULL, 'pending'),
+(10, 13, 60, 1, 30000.00, '2026-08-08 10:58:33', 2, 'delivered'),
+(11, 14, 60, 1, 30000.00, '2026-08-08 11:04:25', 2, 'delivered'),
 (12, 18, 51, 1, 45000.00, NULL, NULL, 'pending'),
 (13, 18, 56, 1, 25000.00, NULL, NULL, 'pending'),
 (14, 19, 51, 1, 45000.00, NULL, NULL, 'pending'),
 (15, 19, 56, 1, 25000.00, NULL, NULL, 'pending'),
-(16, 20, 51, 2, 45000.00, NULL, NULL, 'pending'),
-(17, 20, 52, 2, 60000.00, NULL, NULL, 'pending'),
-(18, 20, 56, 2, 25000.00, NULL, NULL, 'pending'),
-(19, 20, 57, 2, 30000.00, NULL, NULL, 'pending'),
-(20, 20, 63, 3, 69000.00, NULL, NULL, 'pending'),
-(21, 20, 64, 2, 95000.00, NULL, NULL, 'pending'),
-(22, 23, 63, 1, 69000.00, NULL, NULL, 'pending'),
-(23, 23, 64, 1, 95000.00, NULL, NULL, 'pending');
+(16, 20, 51, 2, 45000.00, '2026-08-08 16:42:09', 2, 'delivered'),
+(17, 20, 52, 2, 60000.00, '2026-08-08 16:42:09', 2, 'delivered'),
+(18, 20, 56, 2, 25000.00, '2026-08-08 16:42:09', 2, 'delivered'),
+(19, 20, 57, 2, 30000.00, '2026-08-08 16:42:09', 2, 'delivered'),
+(20, 20, 63, 3, 69000.00, '2026-08-08 16:42:09', 2, 'delivered'),
+(21, 20, 64, 2, 95000.00, '2026-08-08 16:42:09', 2, 'delivered'),
+(22, 23, 63, 1, 69000.00, '2026-08-08 10:16:28', 2, 'delivered'),
+(23, 23, 64, 1, 95000.00, '2026-08-08 10:16:28', 2, 'delivered'),
+(24, 24, 64, 1, 95000.00, NULL, NULL, 'pending'),
+(25, 25, 64, 1, 95000.00, NULL, NULL, 'pending');
 
 -- --------------------------------------------------------
 
@@ -154,7 +158,7 @@ INSERT INTO `food_variants` (`id`, `food_id`, `size`, `price`, `stock`) VALUES
 (61, 15, 'L', 35000.00, 200),
 (62, 16, '500ml', 20000.00, 200),
 (63, 17, 'Combo', 69000.00, 96),
-(64, 18, 'Combo', 95000.00, 97),
+(64, 18, 'Combo', 95000.00, 96),
 (65, 11, 'L', 70000.00, 200),
 (66, 13, 'L', 35000.00, 100);
 
@@ -264,7 +268,9 @@ INSERT INTO `payments` (`id`, `payment_method`, `transaction_code`, `amount`, `s
 (8, 'vnpay', '15650122', 298000.00, 'failed', '2026-08-07 20:21:15'),
 (9, 'vnpay', '15650128', 774000.00, 'completed', '2026-08-07 21:04:12'),
 (10, 'vnpay', '15650131', 458000.00, 'completed', '2026-08-07 23:12:43'),
-(11, 'vnpay', '15650136', 278000.00, 'completed', '2026-08-08 00:14:08');
+(11, 'vnpay', '15650136', 278000.00, 'completed', '2026-08-08 00:14:08'),
+(12, 'vnpay', '0', 229000.00, 'failed', '2026-08-08 02:51:06'),
+(13, 'vnpay', '15650501', 209000.00, 'completed', '2026-08-08 11:21:38');
 
 -- --------------------------------------------------------
 
@@ -315,7 +321,7 @@ CREATE TABLE `room_types` (
 --
 
 INSERT INTO `room_types` (`id`, `name`, `price_modifier`, `description`) VALUES
-(6, '2D', 2000.00, 'Phòng chiếu tiêu chuẩn 2D'),
+(6, '2D', 0.00, 'Phòng chiếu tiêu chuẩn 2D'),
 (7, '3D', 30000.00, 'Phòng chiếu công nghệ 3D'),
 (8, 'IMAX', 45000.00, 'Phòng chiếu IMAX màn hình lớn'),
 (9, 'Gold Class', 10000.00, 'Phòng chiếu cao cấp với ghế VIP');
@@ -1722,7 +1728,7 @@ CREATE TABLE `seat_types` (
 --
 
 INSERT INTO `seat_types` (`id`, `name`, `surcharge`, `description`) VALUES
-(5, 'Standard', 5000.00, 'Ghế thường'),
+(5, 'Standard', 0.00, 'Ghế thường'),
 (6, 'VIP', 15000.00, 'Ghế VIP rộng rãi'),
 (7, 'Couple', 120000.00, 'Ghế đôi dành cho 2 người');
 
@@ -1762,7 +1768,10 @@ INSERT INTO `showtimes` (`id`, `movie_id`, `room_id`, `start_time`, `end_time`, 
 (35, 14, 32, '2026-08-07 22:24:00', '2026-08-08 01:14:00', 50000.00),
 (36, 14, 29, '2026-08-07 22:25:00', '2026-08-08 01:15:00', 50000.00),
 (37, 14, 34, '2026-08-07 22:30:00', '2026-08-08 01:20:00', 50000.00),
-(38, 14, 31, '2026-08-08 21:25:00', '2026-08-09 00:15:00', 50000.00);
+(38, 14, 31, '2026-08-08 21:25:00', '2026-08-09 00:15:00', 50000.00),
+(39, 40, 27, '2026-08-10 17:57:00', '2026-08-10 20:37:00', 20000.00),
+(40, 44, 27, '2026-08-09 18:36:00', '2026-08-09 20:33:00', 20000.00),
+(41, 49, 30, '2026-08-10 10:14:00', '2026-08-10 13:24:00', 45000.00);
 
 -- --------------------------------------------------------
 
@@ -1804,7 +1813,11 @@ INSERT INTO `tickets` (`id`, `booking_id`, `seat_id`, `price`) VALUES
 (93, 22, 1988, 172000.00),
 (94, 22, 1989, 172000.00),
 (95, 23, 1916, 57000.00),
-(96, 23, 1917, 57000.00);
+(96, 23, 1917, 57000.00),
+(97, 24, 2057, 67000.00),
+(98, 24, 2058, 67000.00),
+(99, 25, 2021, 57000.00),
+(100, 25, 2022, 57000.00);
 
 -- --------------------------------------------------------
 
@@ -1832,8 +1845,9 @@ INSERT INTO `users` (`id`, `fullname`, `email`, `password`, `role`, `status`, `c
 (3, 'Trần Thu Trang', 'staff2@petacinema.com', '123456', 'staff', 'active', '2026-07-22 15:37:57'),
 (5, 'Phạm Thị Bình', 'binh@gmail.com', '123456', 'user', 'active', '2026-07-22 15:37:57'),
 (6, 'Hoàng Minh Đức', 'duc@gmail.com', '123456', 'user', 'active', '2026-07-22 15:37:57'),
-(9, 'Tiến', 'tientd.hust@gmail.com', '123456', 'user', 'active', '2026-08-01 22:40:44'),
-(11, 'Tiến Trần Đình', 'tientd.hust23@gmail.com', '$2y$10$4hapKJ8ozRobKngRQv/8KOEnzjKS8F4ASmqSEm8Q8OJOgvU.Z.gLS', 'user', 'active', '2026-08-07 10:41:06');
+(9, 'Tiến', 'tientd.hust@gmail.com', '$2y$10$JPOQ.XEyGnlqmCIGRSD3VeTs2FxwAcsjJW26ECz0fwWDZO3PTgNkC', 'user', 'active', '2026-08-01 22:40:44'),
+(11, 'Tiến Trần Đình', 'tientd.hust23@gmail.com', '$2y$10$4hapKJ8ozRobKngRQv/8KOEnzjKS8F4ASmqSEm8Q8OJOgvU.Z.gLS', 'user', 'active', '2026-08-07 10:41:06'),
+(12, 'Lục Quý Hậu', 'hau@gmail.com', '123456', 'user', 'active', '2026-08-08 10:29:27');
 
 --
 -- Indexes for dumped tables
@@ -1945,7 +1959,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `bookings`
 --
 ALTER TABLE `bookings`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
 
 --
 -- AUTO_INCREMENT for table `foods`
@@ -1957,25 +1971,25 @@ ALTER TABLE `foods`
 -- AUTO_INCREMENT for table `food_orders`
 --
 ALTER TABLE `food_orders`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
 
 --
 -- AUTO_INCREMENT for table `food_variants`
 --
 ALTER TABLE `food_variants`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=68;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=69;
 
 --
 -- AUTO_INCREMENT for table `movies`
 --
 ALTER TABLE `movies`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=57;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=58;
 
 --
 -- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT for table `rooms`
@@ -2005,19 +2019,19 @@ ALTER TABLE `seat_types`
 -- AUTO_INCREMENT for table `showtimes`
 --
 ALTER TABLE `showtimes`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=42;
 
 --
 -- AUTO_INCREMENT for table `tickets`
 --
 ALTER TABLE `tickets`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=97;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=101;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- Constraints for dumped tables
