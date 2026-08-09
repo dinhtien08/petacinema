@@ -26,8 +26,16 @@
 
 <!-- 1. Staff Actions Panel -->
 <?php
-$isCheckedIn = ($booking['checkin_status'] ?? 'pending') === 'checked_in';
-$canCheckIn = ($booking['status'] ?? '') === 'paid' && !$isCheckedIn && !empty($tickets);
+$checkInState = booking_checkin_state($booking);
+$isCheckedIn = $checkInState === 'checked_in';
+$isCheckInExpired = $checkInState === 'expired';
+$checkInDeadlineTimestamp = booking_checkin_deadline($booking);
+$checkInDeadlineText = $checkInDeadlineTimestamp !== null
+    ? date('d/m/Y H:i', $checkInDeadlineTimestamp)
+    : null;
+$canCheckIn = ($booking['status'] ?? '') === 'paid'
+    && $checkInState === 'pending'
+    && !empty($tickets);
 $checkInTime = !empty($booking['checked_in_at'])
     ? date('d/m/Y H:i:s', strtotime($booking['checked_in_at']))
     : null;
@@ -45,24 +53,40 @@ foreach ($foodOrders as $fo) {
         $deliveredBy = $fo['delivered_by_name'];
     }
 }
+
+$isFoodDeliveryExpired = $hasFoodOrders
+    && !$allFoodDelivered
+    && booking_food_delivery_expired($booking);
+$canDeliverFood = $hasFoodOrders
+    && !$allFoodDelivered
+    && ($booking['status'] ?? '') === 'paid'
+    && !$isFoodDeliveryExpired;
+
+$checkInBadgeClass = match ($checkInState) {
+    'checked_in' => 'bg-success',
+    'expired' => 'bg-danger',
+    default => 'bg-warning text-dark',
+};
+$checkInBadgeLabel = match ($checkInState) {
+    'checked_in' => 'Đã check-in booking',
+    'expired' => 'Quá hạn check-in',
+    default => 'Chưa check-in',
+};
 ?>
 <div class="card shadow-sm border-0 mb-4 bg-light">
     <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3 py-3">
         <div>
             <span class="badge bg-primary fs-6 px-3 py-2">HÀNH ĐỘNG NHÂN VIÊN</span>
-            <div class="text-muted small mt-2">Check-in áp dụng cho toàn bộ booking, không check-in riêng từng ghế.</div>
+            <div class="text-muted small mt-2">
+                Check-in áp dụng cho toàn bộ booking và chỉ hợp lệ đến
+                <?= (int) (defined('CHECKIN_GRACE_MINUTES') ? CHECKIN_GRACE_MINUTES : 30) ?> phút sau giờ bắt đầu.
+                Đồ ăn được giao đến hết suất chiếu.
+            </div>
         </div>
 
         <div class="d-flex flex-wrap gap-3">
             <div class="d-flex flex-column align-items-end">
-                <?php if ($canCheckIn): ?>
-                    <form method="POST" action="?action=staff_booking_checkin" onsubmit="return confirm('Xác nhận check-in booking <?= htmlspecialchars($booking['booking_code'] ?? '', ENT_QUOTES, 'UTF-8') ?>?');">
-                        <input type="hidden" name="booking_id" value="<?= (int)$booking['id'] ?>">
-                        <button type="submit" class="btn btn-success px-4 py-2">
-                            <i class="bi bi-check2-circle me-2"></i> Check-in & In vé
-                        </button>
-                    </form>
-                <?php elseif ($isCheckedIn): ?>
+                <?php if ($isCheckedIn): ?>
                     <button class="btn btn-success px-4 py-2" disabled>
                         <i class="bi bi-check-circle-fill me-2"></i> Đã check-in
                     </button>
@@ -75,26 +99,61 @@ foreach ($foodOrders as $fo) {
                         <i class="bi bi-lock-fill me-2"></i> Chưa thể check-in
                     </button>
                     <div class="text-danger mt-1" style="font-size: 0.75rem;">Booking phải thanh toán thành công.</div>
-                <?php else: ?>
+                <?php elseif ($isCheckInExpired): ?>
+                    <button class="btn btn-danger px-4 py-2" disabled>
+                        <i class="bi bi-clock-history me-2"></i> Quá hạn check-in
+                    </button>
+                    <div class="text-danger mt-1" style="font-size: 0.75rem;">
+                        Hạn check-in: <?= htmlspecialchars($checkInDeadlineText ?? '-') ?>
+                    </div>
+                <?php elseif (empty($tickets)): ?>
                     <button class="btn btn-secondary px-4 py-2" disabled>
                         <i class="bi bi-exclamation-circle me-2"></i> Không có vé
                     </button>
+                <?php elseif ($canCheckIn): ?>
+                    <form method="POST" action="?action=staff_booking_checkin" onsubmit="return confirm('Xác nhận check-in booking <?= htmlspecialchars($booking['booking_code'] ?? '', ENT_QUOTES, 'UTF-8') ?>?');">
+                        <input type="hidden" name="booking_id" value="<?= (int)$booking['id'] ?>">
+                        <button type="submit" class="btn btn-success px-4 py-2">
+                            <i class="bi bi-check2-circle me-2"></i> Check-in & In vé
+                        </button>
+                    </form>
+                    <?php if ($checkInDeadlineText): ?>
+                        <div class="text-muted mt-1" style="font-size: 0.75rem;">Hạn: <?= htmlspecialchars($checkInDeadlineText) ?></div>
+                    <?php endif; ?>
                 <?php endif; ?>
             </div>
 
             <?php if ($hasFoodOrders): ?>
                 <div class="d-flex flex-column align-items-end border-start ps-3">
-                    <?php if (!$allFoodDelivered): ?>
-                        <a href="?action=staff_food_delivery_confirm&booking_id=<?= (int)$booking['id'] ?>" class="btn btn-warning px-4 py-2 text-dark">
-                            <i class="bi bi-box-seam me-2"></i> Xác nhận đã giao đồ ăn
-                        </a>
-                    <?php else: ?>
+                    <?php if ($allFoodDelivered): ?>
                         <button class="btn btn-warning px-4 py-2 text-dark" disabled>
                             <i class="bi bi-check-circle-fill me-2"></i> Đã giao đồ ăn
                         </button>
                         <div class="text-end text-muted mt-1" style="font-size: 0.75rem;">
                             <div>Thời gian: <?= htmlspecialchars($deliveryTime ?? '-') ?></div>
                             <div>Thực hiện: <?= htmlspecialchars($deliveredBy ?? '-') ?></div>
+                        </div>
+                    <?php elseif (($booking['status'] ?? '') !== 'paid'): ?>
+                        <button class="btn btn-secondary px-4 py-2" disabled>
+                            <i class="bi bi-lock-fill me-2"></i> Chưa thể giao đồ ăn
+                        </button>
+                        <div class="text-danger mt-1" style="font-size: 0.75rem;">Booking phải thanh toán thành công.</div>
+                    <?php elseif ($isFoodDeliveryExpired): ?>
+                        <button class="btn btn-danger px-4 py-2" disabled>
+                            <i class="bi bi-clock-history me-2"></i> Quá hạn giao đồ ăn
+                        </button>
+                        <div class="text-danger mt-1" style="font-size: 0.75rem;">
+                            Suất chiếu đã kết thúc lúc <?= !empty($booking['end_time']) ? date('d/m/Y H:i', strtotime($booking['end_time'])) : '-' ?>.
+                        </div>
+                    <?php elseif ($canDeliverFood): ?>
+                        <form method="POST" action="?action=staff_food_delivery_confirm" onsubmit="return confirm('Xác nhận đã giao toàn bộ đồ ăn của booking này?');">
+                            <input type="hidden" name="booking_id" value="<?= (int)$booking['id'] ?>">
+                            <button type="submit" class="btn btn-warning px-4 py-2 text-dark">
+                                <i class="bi bi-box-seam me-2"></i> Xác nhận đã giao đồ ăn
+                            </button>
+                        </form>
+                        <div class="text-muted mt-1" style="font-size: 0.75rem;">
+                            Giao trước <?= !empty($booking['end_time']) ? date('d/m/Y H:i', strtotime($booking['end_time'])) : 'khi hết suất' ?>.
                         </div>
                     <?php endif; ?>
                 </div>
@@ -216,8 +275,8 @@ foreach ($foodOrders as $fo) {
         <h5 class="card-title mb-0 fw-bold">
             <i class="bi bi-grid-3x3-gap me-2"></i> Danh sách ghế đã đặt
         </h5>
-        <span class="badge <?= $isCheckedIn ? 'bg-success' : 'bg-warning text-dark' ?> px-3 py-2">
-            <?= $isCheckedIn ? 'Đã check-in booking' : 'Chưa check-in' ?>
+        <span class="badge <?= $checkInBadgeClass ?> px-3 py-2">
+            <?= htmlspecialchars($checkInBadgeLabel) ?>
         </span>
     </div>
     <div class="card-body p-0">
@@ -307,6 +366,8 @@ foreach ($foodOrders as $fo) {
                                         <div class="text-muted mt-1" style="font-size: 0.7rem;">
                                             <?= !empty($fo['delivered_at']) ? date('d/m/Y H:i', strtotime($fo['delivered_at'])) : '' ?>
                                         </div>
+                                    <?php elseif ($isFoodDeliveryExpired): ?>
+                                        <span class="badge bg-danger">Quá hạn giao</span>
                                     <?php else: ?>
                                         <span class="badge bg-warning text-dark">Chờ giao</span>
                                     <?php endif; ?>

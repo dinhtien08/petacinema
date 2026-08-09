@@ -117,13 +117,25 @@ class BookingModel extends BaseModel
      */
     public function checkInBooking(int $bookingId, int $staffId): array
     {
+        $graceMinutes = defined('CHECKIN_GRACE_MINUTES')
+            ? max(0, (int) CHECKIN_GRACE_MINUTES)
+            : 30;
+
         try {
             $this->pdo->beginTransaction();
 
             $stmt = $this->pdo->prepare(
-                "SELECT id, status, checkin_status, checked_in_at, checked_in_by
-                 FROM bookings
-                 WHERE id = :id
+                "SELECT b.id,
+                        b.status,
+                        b.checkin_status,
+                        b.checked_in_at,
+                        b.checked_in_by,
+                        st.start_time,
+                        DATE_ADD(st.start_time, INTERVAL {$graceMinutes} MINUTE) AS checkin_deadline,
+                        (NOW() > DATE_ADD(st.start_time, INTERVAL {$graceMinutes} MINUTE)) AS checkin_expired
+                 FROM bookings b
+                 JOIN showtimes st ON st.id = b.showtime_id
+                 WHERE b.id = :id
                  LIMIT 1
                  FOR UPDATE"
             );
@@ -145,14 +157,28 @@ class BookingModel extends BaseModel
                 return ['success' => false, 'message' => 'Booking này đã được check-in trước đó.'];
             }
 
+            if ((int) ($booking['checkin_expired'] ?? 0) === 1) {
+                $this->pdo->rollBack();
+                $deadlineText = !empty($booking['checkin_deadline'])
+                    ? date('d/m/Y H:i', strtotime($booking['checkin_deadline']))
+                    : '';
+                $message = "Đã quá hạn check-in. Chỉ được check-in đến {$graceMinutes} phút sau giờ bắt đầu suất chiếu.";
+                if ($deadlineText !== '') {
+                    $message .= ' Hạn check-in: ' . $deadlineText . '.';
+                }
+                return ['success' => false, 'message' => $message];
+            }
+
             $update = $this->pdo->prepare(
-                "UPDATE bookings
-                 SET checkin_status = 'checked_in',
-                     checked_in_at = NOW(),
-                     checked_in_by = :staff_id
-                 WHERE id = :id
-                   AND status = 'paid'
-                   AND checkin_status <> 'checked_in'"
+                "UPDATE bookings b
+                 JOIN showtimes st ON st.id = b.showtime_id
+                 SET b.checkin_status = 'checked_in',
+                     b.checked_in_at = NOW(),
+                     b.checked_in_by = :staff_id
+                 WHERE b.id = :id
+                   AND b.status = 'paid'
+                   AND b.checkin_status <> 'checked_in'
+                   AND NOW() <= DATE_ADD(st.start_time, INTERVAL {$graceMinutes} MINUTE)"
             );
             $update->execute([
                 ':staff_id' => $staffId,
@@ -161,7 +187,7 @@ class BookingModel extends BaseModel
 
             if ($update->rowCount() !== 1) {
                 $this->pdo->rollBack();
-                return ['success' => false, 'message' => 'Không thể check-in booking. Vui lòng tải lại và thử lại.'];
+                return ['success' => false, 'message' => 'Không thể check-in booking. Booking có thể vừa quá hạn hoặc đã được xử lý.'];
             }
 
             $this->pdo->commit();
@@ -299,17 +325,104 @@ class BookingModel extends BaseModel
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
-    public function confirmFoodDelivered($bookingId, $staffId)
+    public function confirmFoodDelivered(int $bookingId, int $staffId): array
     {
-        $sql = "UPDATE food_orders 
-                SET delivery_status = 'delivered', 
-                    delivered_at = NOW(), 
-                    delivered_by = :staff_id 
-                WHERE booking_id = :booking_id";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->bindParam(':staff_id', $staffId, PDO::PARAM_INT);
-        $stmt->bindParam(':booking_id', $bookingId, PDO::PARAM_INT);
-        return $stmt->execute();
+        try {
+            $this->pdo->beginTransaction();
+
+            $bookingStmt = $this->pdo->prepare(
+                "SELECT b.id,
+                        b.status,
+                        st.end_time,
+                        (NOW() > st.end_time) AS delivery_expired
+                 FROM bookings b
+                 JOIN showtimes st ON st.id = b.showtime_id
+                 WHERE b.id = :booking_id
+                 LIMIT 1
+                 FOR UPDATE"
+            );
+            $bookingStmt->execute([':booking_id' => $bookingId]);
+            $booking = $bookingStmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$booking) {
+                $this->pdo->rollBack();
+                return ['success' => false, 'message' => 'Không tìm thấy booking.'];
+            }
+
+            if (($booking['status'] ?? '') !== 'paid') {
+                $this->pdo->rollBack();
+                return ['success' => false, 'message' => 'Chỉ booking đã thanh toán mới được giao đồ ăn.'];
+            }
+
+            $foodStmt = $this->pdo->prepare(
+                "SELECT id, delivery_status
+                 FROM food_orders
+                 WHERE booking_id = :booking_id
+                 FOR UPDATE"
+            );
+            $foodStmt->execute([':booking_id' => $bookingId]);
+            $foodOrders = $foodStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            if (empty($foodOrders)) {
+                $this->pdo->rollBack();
+                return ['success' => false, 'message' => 'Booking này không có đồ ăn cần giao.'];
+            }
+
+            $hasPendingFood = false;
+            foreach ($foodOrders as $foodOrder) {
+                if (($foodOrder['delivery_status'] ?? 'pending') !== 'delivered') {
+                    $hasPendingFood = true;
+                    break;
+                }
+            }
+
+            if (!$hasPendingFood) {
+                $this->pdo->rollBack();
+                return ['success' => false, 'message' => 'Đồ ăn của booking này đã được giao trước đó.'];
+            }
+
+            if ((int) ($booking['delivery_expired'] ?? 0) === 1) {
+                $this->pdo->rollBack();
+                $endTimeText = !empty($booking['end_time'])
+                    ? date('d/m/Y H:i', strtotime($booking['end_time']))
+                    : '';
+                $message = 'Đã quá hạn giao đồ ăn. Đồ ăn chỉ được xác nhận giao đến hết suất chiếu.';
+                if ($endTimeText !== '') {
+                    $message .= ' Suất chiếu kết thúc lúc ' . $endTimeText . '.';
+                }
+                return ['success' => false, 'message' => $message];
+            }
+
+            $update = $this->pdo->prepare(
+                "UPDATE food_orders fo
+                 JOIN bookings b ON b.id = fo.booking_id
+                 JOIN showtimes st ON st.id = b.showtime_id
+                 SET fo.delivery_status = 'delivered',
+                     fo.delivered_at = NOW(),
+                     fo.delivered_by = :staff_id
+                 WHERE fo.booking_id = :booking_id
+                   AND fo.delivery_status = 'pending'
+                   AND b.status = 'paid'
+                   AND NOW() <= st.end_time"
+            );
+            $update->execute([
+                ':staff_id' => $staffId,
+                ':booking_id' => $bookingId,
+            ]);
+
+            if ($update->rowCount() < 1) {
+                $this->pdo->rollBack();
+                return ['success' => false, 'message' => 'Không thể xác nhận giao đồ ăn. Booking có thể vừa quá hạn hoặc đã được xử lý.'];
+            }
+
+            $this->pdo->commit();
+            return ['success' => true, 'message' => 'Đã xác nhận giao đồ ăn thành công.'];
+        } catch (Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            return ['success' => false, 'message' => 'Không thể xác nhận giao đồ ăn: ' . $e->getMessage()];
+        }
     }
 
     // Danh sách suất chiếu kèm tên phim + phòng, dùng cho dropdown chọn suất chiếu

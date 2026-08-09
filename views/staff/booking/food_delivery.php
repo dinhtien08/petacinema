@@ -7,7 +7,7 @@
                     <i class="bi bi-box-seam me-2 text-primary"></i> Giao đồ ăn
                 </h4>
                 <p class="text-muted mb-0">
-                    Nhập hoặc quét mã Booking để bắt đầu giao đồ ăn & thức uống.
+                    Nhập hoặc quét mã Booking. Đồ ăn & thức uống được xác nhận giao đến hết suất chiếu.
                 </p>
             </div>
             <a href="?action=staff_booking_list" class="btn btn-outline-secondary">
@@ -103,6 +103,15 @@
     </script>
 
 <?php else: ?>
+    <?php
+    $isFoodDeliveryExpired = $hasFoodOrders
+        && !$allFoodDelivered
+        && booking_food_delivery_expired($booking);
+    $canDeliverFood = $hasFoodOrders
+        && !$allFoodDelivered
+        && ($booking['status'] ?? '') === 'paid'
+        && !$isFoodDeliveryExpired;
+    ?>
     <!-- Details & Confirm State -->
     <div class="container-fluid px-4">
         <div class="d-flex align-items-center justify-content-between mb-4">
@@ -156,7 +165,11 @@
                             </tr>
                             <tr>
                                 <td class="text-muted">Suất chiếu:</td>
-                                <td><?= !empty($booking['start_time']) ? date('d/m/Y H:i', strtotime($booking['start_time'])) : '-' ?> (<?= htmlspecialchars($booking['room_name'] ?? '') ?>)</td>
+                                <td>
+                                    <?= !empty($booking['start_time']) ? date('d/m/Y H:i', strtotime($booking['start_time'])) : '-' ?>
+                                    - <?= !empty($booking['end_time']) ? date('H:i', strtotime($booking['end_time'])) : '-' ?>
+                                    (<?= htmlspecialchars($booking['room_name'] ?? '') ?>)
+                                </td>
                             </tr>
                         </table>
                     </div>
@@ -173,23 +186,45 @@
                     </div>
                     <div class="card-body d-flex flex-column justify-content-center align-items-center py-4">
                         <?php if ($hasFoodOrders): ?>
-                            <?php if (!$allFoodDelivered): ?>
-                                <div class="text-center mb-3">
-                                    <i class="bi bi-hourglass-split text-warning" style="font-size: 2.5rem;"></i>
-                                    <p class="text-muted mt-2 mb-0">Có đồ ăn cần được giao cho khách hàng.</p>
-                                </div>
-                                <a href="?action=staff_food_delivery_confirm&booking_id=<?= (int)$booking['id'] ?>&redirect=food_delivery" class="btn btn-warning btn-lg px-5 text-dark fw-bold shadow-sm">
-                                    <i class="bi bi-check2-all me-2"></i> Xác nhận Giao đồ ăn
-                                </a>
-                            <?php else: ?>
+                            <?php if ($allFoodDelivered): ?>
                                 <div class="text-center mb-3 text-success">
                                     <i class="bi bi-check-circle-fill" style="font-size: 3rem;"></i>
-                                    <h5 class="fw-bold mt-2">✓ Food Delivered</h5>
+                                    <h5 class="fw-bold mt-2">Đã giao đồ ăn</h5>
                                 </div>
                                 <div class="text-center small text-muted border-top pt-2 w-100" style="max-width: 300px;">
-                                    <div><strong>Thời gian giao:</strong> <?= $deliveryTime ?></div>
+                                    <div><strong>Thời gian giao:</strong> <?= htmlspecialchars($deliveryTime ?? '-') ?></div>
                                     <div><strong>Nhân viên:</strong> <?= htmlspecialchars($deliveredBy ?? '-') ?></div>
                                 </div>
+                            <?php elseif (($booking['status'] ?? '') !== 'paid'): ?>
+                                <div class="text-center text-danger">
+                                    <i class="bi bi-lock-fill" style="font-size: 2.5rem;"></i>
+                                    <h5 class="fw-bold mt-2">Chưa thể giao đồ ăn</h5>
+                                    <p class="mb-0">Booking phải thanh toán thành công.</p>
+                                </div>
+                            <?php elseif ($isFoodDeliveryExpired): ?>
+                                <div class="text-center text-danger">
+                                    <i class="bi bi-clock-history" style="font-size: 2.8rem;"></i>
+                                    <h5 class="fw-bold mt-2">Quá hạn giao đồ ăn</h5>
+                                    <p class="mb-0">
+                                        Chỉ được giao đến hết suất chiếu
+                                        <?= !empty($booking['end_time']) ? '(' . date('d/m/Y H:i', strtotime($booking['end_time'])) . ')' : '' ?>.
+                                    </p>
+                                </div>
+                            <?php elseif ($canDeliverFood): ?>
+                                <div class="text-center mb-3">
+                                    <i class="bi bi-hourglass-split text-warning" style="font-size: 2.5rem;"></i>
+                                    <p class="text-muted mt-2 mb-1">Có đồ ăn cần được giao cho khách hàng.</p>
+                                    <small class="text-muted">
+                                        Hạn giao: <?= !empty($booking['end_time']) ? date('d/m/Y H:i', strtotime($booking['end_time'])) : 'đến hết suất chiếu' ?>
+                                    </small>
+                                </div>
+                                <form method="POST" action="?action=staff_food_delivery_confirm" onsubmit="return confirm('Xác nhận đã giao toàn bộ đồ ăn của booking này?');">
+                                    <input type="hidden" name="booking_id" value="<?= (int)$booking['id'] ?>">
+                                    <input type="hidden" name="redirect" value="food_delivery">
+                                    <button type="submit" class="btn btn-warning btn-lg px-5 text-dark fw-bold shadow-sm">
+                                        <i class="bi bi-check2-all me-2"></i> Xác nhận Giao đồ ăn
+                                    </button>
+                                </form>
                             <?php endif; ?>
                         <?php else: ?>
                             <div class="text-center text-muted">
@@ -239,6 +274,8 @@
                                                 <span class="badge bg-success" title="Nhân viên: <?= htmlspecialchars($fo['delivered_by_name'] ?? '-') ?>">
                                                     ✓ Đã giao
                                                 </span>
+                                            <?php elseif ($isFoodDeliveryExpired): ?>
+                                                <span class="badge bg-danger">Quá hạn giao</span>
                                             <?php else: ?>
                                                 <span class="badge bg-warning text-dark">Chờ giao</span>
                                             <?php endif; ?>

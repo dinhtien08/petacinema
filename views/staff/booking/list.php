@@ -489,9 +489,14 @@ foreach ($displayBookings as $booking) {
                                 </td>
 
                                 <td class="text-center">
-                                    <?php if (($booking['checkin_status'] ?? 'pending') === 'checked_in'): ?>
+                                    <?php $checkInState = booking_checkin_state($booking); ?>
+                                    <?php if ($checkInState === 'checked_in'): ?>
                                         <span class="badge text-bg-success px-3 py-2">
                                             <i class="bi bi-person-check-fill me-1"></i> Đã check-in
+                                        </span>
+                                    <?php elseif ($checkInState === 'expired'): ?>
+                                        <span class="badge text-bg-danger px-3 py-2">
+                                            <i class="bi bi-clock-history me-1"></i> Quá hạn check-in
                                         </span>
                                     <?php else: ?>
                                         <span class="badge text-bg-light border text-dark px-3 py-2">

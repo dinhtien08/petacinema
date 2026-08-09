@@ -230,8 +230,14 @@ class StaffBookingController
 
     public function confirmFoodDelivery()
     {
-        $bookingId = (int) ($_GET['booking_id'] ?? 0);
-        $redirect = $_GET['redirect'] ?? '';
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            set_flash('error', 'Thao tác giao đồ ăn phải được thực hiện bằng nút xác nhận.');
+            header('Location: ?action=staff_food_delivery');
+            exit;
+        }
+
+        $bookingId = (int) ($_POST['booking_id'] ?? 0);
+        $redirect = $_POST['redirect'] ?? '';
         if ($bookingId <= 0) {
             set_flash('error', 'ID booking không hợp lệ.');
             header('Location: ?action=staff_checkin');
@@ -239,10 +245,10 @@ class StaffBookingController
         }
 
         $bookingModel = new BookingModel();
-        $staffId = $_SESSION['user']['id'];
+        $staffId = (int) $_SESSION['user']['id'];
+        $result = $bookingModel->confirmFoodDelivered($bookingId, $staffId);
 
-        $bookingModel->confirmFoodDelivered($bookingId, $staffId);
-        set_flash('success', 'Đã xác nhận giao đồ ăn thành công.');
+        set_flash($result['success'] ? 'success' : 'error', $result['message']);
 
         if ($redirect === 'food_delivery') {
             $booking = $bookingModel->getById($bookingId);
