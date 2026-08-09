@@ -111,12 +111,21 @@
             Xem sơ đồ ghế
         </a>
 
-        <a href="?action=showtime_edit&id=<?= $showtime['id'] ?>"
-           class="btn btn-warning">
-            <i class="bi bi-pencil-square"></i>
-            Chỉnh sửa
-
-        </a>
+        <?php if (!empty($hasActiveBooking)): ?>
+            <button type="button"
+                    class="btn btn-warning"
+                    title="Không thể chỉnh sửa: đang có vé đã thanh toán hoặc booking còn thời gian giữ ghế"
+                    disabled>
+                <i class="bi bi-pencil-square"></i>
+                Chỉnh sửa
+            </button>
+        <?php else: ?>
+            <a href="?action=showtime_edit&id=<?= (int)$showtime['id'] ?>"
+               class="btn btn-warning">
+                <i class="bi bi-pencil-square"></i>
+                Chỉnh sửa
+            </a>
+        <?php endif; ?>
 
     </div>
 

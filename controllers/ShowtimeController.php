@@ -202,6 +202,7 @@ class ShowtimeController
         }
 
         $hasBooking = $this->showtimeModel->hasBooking($id);
+        $hasActiveBooking = $this->showtimeModel->hasActiveBooking($id);
 
         $title = 'Chi tiết suất chiếu';
 
@@ -225,8 +226,8 @@ class ShowtimeController
             exit;
         }
 
-        if ($this->showtimeModel->hasBooking($id)) {
-            header('Location: ?action=showtimes&error=locked');
+        if ($this->showtimeModel->hasActiveBooking($id)) {
+            header('Location: ?action=showtimes&error=edit_locked');
             exit;
         }
 
@@ -257,8 +258,8 @@ class ShowtimeController
             exit;
         }
 
-        if ($this->showtimeModel->hasBooking($id)) {
-            header('Location: ?action=showtimes&error=locked');
+        if ($this->showtimeModel->hasActiveBooking($id)) {
+            header('Location: ?action=showtimes&error=edit_locked');
             exit;
         }
 
@@ -392,14 +393,14 @@ class ShowtimeController
             'base_price' => $basePrice
         ];
 
-        if ($this->showtimeModel->updateIfNoBooking($id, $data)) {
+        if ($this->showtimeModel->updateIfNoActiveBooking($id, $data)) {
 
             header('Location: ?action=showtimes');
             exit;
         }
 
-        // Trường hợp booking vừa phát sinh trong lúc admin đang mở form.
-        header('Location: ?action=showtimes&error=locked');
+        // Trường hợp booking còn hiệu lực vừa phát sinh trong lúc admin đang mở form.
+        header('Location: ?action=showtimes&error=edit_locked');
         exit;
     }
     public function delete()
@@ -419,7 +420,7 @@ class ShowtimeController
         }
 
         if ($this->showtimeModel->hasBooking($id)) {
-            header('Location: ?action=showtimes&error=locked');
+            header('Location: ?action=showtimes&error=delete_locked');
             exit;
         }
 
