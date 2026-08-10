@@ -2,6 +2,24 @@
 class MovieModel extends BaseModel
 {
     protected $table = "movies";
+
+    /**
+     * Tự động chuyển phim từ "Sắp chiếu" sang "Đang chiếu"
+     * khi đã đến ngày khởi chiếu.
+     *
+     * Chỉ cập nhật coming_soon để không làm thay đổi các phim đã ended.
+     */
+    private function syncStatusByReleaseDate()
+    {
+        $sql = "UPDATE {$this->table}
+                SET status = 'now_showing'
+                WHERE status = 'coming_soon'
+                  AND release_date IS NOT NULL
+                  AND release_date <= CURDATE()";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute();
+    }
     public function delete($id)
     {
         $sql = "DELETE FROM movies WHERE id = :id";
@@ -49,6 +67,8 @@ class MovieModel extends BaseModel
     }
     public function getById($id)
     {
+        $this->syncStatusByReleaseDate();
+
         $sql = "SELECT * FROM {$this->table} WHERE id = :id";
 
         $stmt = $this->pdo->prepare($sql);
@@ -82,6 +102,8 @@ class MovieModel extends BaseModel
     }
     public function getMovieList()
     {
+        $this->syncStatusByReleaseDate();
+
         $sql = "SELECT id, title, duration
                 FROM movies
                 WHERE status <> 'ended'
@@ -94,6 +116,8 @@ class MovieModel extends BaseModel
     }
     public function findById($id)
     {
+        $this->syncStatusByReleaseDate();
+
         $sql = "SELECT *
                 FROM movies
                 WHERE id = :id";
@@ -109,6 +133,8 @@ class MovieModel extends BaseModel
 
     public function searchAndFilter($keyword = null, $status = null, $genre = null, $ageRating = null, $sort = 'status')
     {
+        $this->syncStatusByReleaseDate();
+
         $sql = "SELECT * FROM {$this->table} WHERE 1=1";
         $params = [];
 
@@ -181,6 +207,8 @@ class MovieModel extends BaseModel
 
     public function getNowShowingMovies()
     {
+        $this->syncStatusByReleaseDate();
+
         $sql = "SELECT * FROM {$this->table} WHERE status = 'now_showing' ORDER BY release_date DESC";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute();
@@ -189,6 +217,8 @@ class MovieModel extends BaseModel
 
     public function getComingSoonMovies()
     {
+        $this->syncStatusByReleaseDate();
+
         $sql = "SELECT * FROM {$this->table} WHERE status = 'coming_soon' ORDER BY release_date ASC";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute();
