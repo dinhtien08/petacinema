@@ -449,8 +449,16 @@ foreach ($displayBookings as $booking) {
 
                                     <?php if (!empty($booking['seat_numbers'])): ?>
 
-                                        <span class="badge text-bg-light border">
-                                            <?= e($booking['seat_numbers']) ?>
+                                        <?php
+                                            $seatList = array_values(array_filter(array_map('trim', explode(',', (string) $booking['seat_numbers']))));
+                                            $visibleSeats = array_slice($seatList, 0, 8);
+                                            $hiddenSeatCount = max(0, count($seatList) - count($visibleSeats));
+                                        ?>
+                                        <span class="badge text-bg-light border" title="<?= e((string) $booking['seat_numbers']) ?>">
+                                            <?= e(implode(', ', $visibleSeats)) ?>
+                                            <?php if ($hiddenSeatCount > 0): ?>
+                                                <span class="ms-1">+<?= $hiddenSeatCount ?> ghế</span>
+                                            <?php endif; ?>
                                         </span>
 
                                     <?php else: ?>

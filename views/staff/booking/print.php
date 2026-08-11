@@ -147,6 +147,79 @@
             margin-top: 1mm;
         }
 
+        /* Food receipt printed after the movie ticket(s). */
+        .food-receipt {
+            width: 120mm;
+            min-height: 90mm;
+            margin: 0 auto 16px;
+            padding: 6mm;
+            box-sizing: border-box;
+            background: #ffffff;
+            border: 1px solid #000000;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 11px;
+            color: #000000;
+        }
+
+        .food-receipt-header {
+            text-align: center;
+            padding-bottom: 2mm;
+            margin-bottom: 3mm;
+            border-bottom: 1px dashed #000000;
+        }
+
+        .food-receipt-title {
+            font-size: 14px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .food-receipt-subtitle {
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .food-order-row {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 3mm;
+            padding: 1.8mm 0;
+            border-bottom: 1px dashed #cccccc;
+        }
+
+        .food-order-name {
+            font-weight: bold;
+        }
+
+        .food-order-meta {
+            margin-top: 0.5mm;
+            font-size: 9px;
+        }
+
+        .food-order-amount {
+            text-align: right;
+            white-space: nowrap;
+            font-weight: bold;
+        }
+
+        .food-total-row {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 3mm;
+            padding-top: 2mm;
+            border-top: 1.5px solid #000000;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .food-receipt-note {
+            margin-top: 4mm;
+            padding-top: 2mm;
+            border-top: 1px dashed #cccccc;
+            text-align: center;
+            font-size: 9px;
+        }
+
         /* Print Media Queries */
         @media print {
             body {
@@ -171,6 +244,15 @@
                 box-shadow: none;
                 border: 1px solid #000;
                 page-break-after: always;
+            }
+
+            .food-receipt {
+                width: 120mm;
+                min-height: 90mm;
+                margin: 0;
+                box-shadow: none;
+                border: 1px solid #000;
+                page-break-after: avoid;
             }
 
             @page {
@@ -281,6 +363,69 @@
             </div>
         <?php endforeach; ?>
     </div>
+
+    <?php if (!empty($foodOrders)): ?>
+        <?php
+            $printBookingCode = $tickets[0]['booking_code'] ?? '-';
+            $foodStatusLabels = [
+                'pending' => 'Chờ giao',
+                'delivered' => 'Đã giao',
+            ];
+        ?>
+        <div class="food-receipt">
+            <div class="food-receipt-header">
+                <div class="food-receipt-title">PETACINEMA</div>
+                <div class="food-receipt-subtitle">ĐỒ ĂN ĐÃ ĐẶT</div>
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">Mã Đơn:</span>
+                <span class="info-value"><?= htmlspecialchars($printBookingCode) ?></span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Khách:</span>
+                <span class="info-value"><?= htmlspecialchars($tickets[0]['customer_name'] ?? 'Khách vãng lai') ?></span>
+            </div>
+
+            <div style="margin-top: 3mm;">
+                <?php foreach ($foodOrders as $food): ?>
+                    <?php
+                        $quantity = max(1, (int) ($food['quantity'] ?? 1));
+                        $unitPrice = (float) ($food['price_at_booking'] ?? 0);
+                        $lineTotal = $unitPrice * $quantity;
+                        $size = trim((string) ($food['variant_size'] ?? ''));
+                        $deliveryStatus = (string) ($food['delivery_status'] ?? 'pending');
+                    ?>
+                    <div class="food-order-row">
+                        <div>
+                            <div class="food-order-name">
+                                <?= htmlspecialchars($food['food_name'] ?? 'Món ăn') ?>
+                                <?php if ($size !== ''): ?>
+                                    - Size <?= htmlspecialchars($size) ?>
+                                <?php endif; ?>
+                            </div>
+                            <div class="food-order-meta">
+                                SL: <?= $quantity ?> × <?= number_format($unitPrice, 0, ',', '.') ?> đ
+                                · <?= htmlspecialchars($foodStatusLabels[$deliveryStatus] ?? ucfirst($deliveryStatus)) ?>
+                            </div>
+                        </div>
+                        <div class="food-order-amount">
+                            <?= number_format($lineTotal, 0, ',', '.') ?> đ
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+
+            <div class="food-total-row">
+                <span>Tổng đồ ăn:</span>
+                <span><?= number_format((float) ($foodTotal ?? 0), 0, ',', '.') ?> đ</span>
+            </div>
+
+            <div class="food-receipt-note">
+                Vui lòng giữ phiếu này để đối chiếu các món đã đặt.
+            </div>
+        </div>
+    <?php endif; ?>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {

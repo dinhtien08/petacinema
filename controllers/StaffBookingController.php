@@ -156,6 +156,23 @@ class StaffBookingController
             exit;
         }
 
+        // Lấy đồ ăn theo booking để in kèm sau các vé.
+        // Luồng check-in hiện tại luôn truyền booking_id; fallback về booking_id của vé đầu tiên
+        // để các link in cũ vẫn hoạt động.
+        $bookingId = (int) ($_GET['booking_id'] ?? 0);
+        if ($bookingId <= 0) {
+            $bookingId = (int) ($tickets[0]['booking_id'] ?? 0);
+        }
+
+        $foodOrders = $bookingId > 0
+            ? $bookingModel->getBookingFoodOrders($bookingId)
+            : [];
+
+        $foodTotal = array_sum(array_map(
+            fn($food) => (float) ($food['price_at_booking'] ?? 0) * (int) ($food['quantity'] ?? 0),
+            $foodOrders
+        ));
+
         require_once PATH_VIEW . 'staff/booking/print.php';
     }
 

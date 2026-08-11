@@ -20,7 +20,18 @@
             <div class="fw-bold fs-5 text-dark mb-2"><?= h($booking['booking_code']) ?></div>
             <div class="small"><span class="text-secondary">Phim:</span> <?= h($booking['movie_title']) ?></div>
             <div class="small"><span class="text-secondary">Suất:</span> <?= date('d/m/Y H:i', strtotime((string) $booking['start_time'])) ?></div>
-            <div class="small"><span class="text-secondary">Ghế:</span> <?= h($booking['seat_numbers'] ?? '-') ?></div>
+            <?php
+                $seatList = array_values(array_filter(array_map('trim', explode(',', (string) ($booking['seat_numbers'] ?? '')))));
+                $visibleSeats = array_slice($seatList, 0, 8);
+                $hiddenSeatCount = max(0, count($seatList) - count($visibleSeats));
+            ?>
+            <div class="small" title="<?= h((string) ($booking['seat_numbers'] ?? '')) ?>">
+                <span class="text-secondary">Ghế:</span>
+                <?= !empty($visibleSeats) ? h(implode(', ', $visibleSeats)) : '-' ?>
+                <?php if ($hiddenSeatCount > 0): ?>
+                    <span class="text-secondary">+<?= $hiddenSeatCount ?> ghế</span>
+                <?php endif; ?>
+            </div>
             <div class="small"><span class="text-secondary">Tổng tiền:</span> <?= number_format((float) $booking['total_amount'], 0, ',', '.') ?> VNĐ</div>
         </div>
     <?php endif; ?>
