@@ -100,7 +100,17 @@ $bookings = $bookings ?? [];
                             <div class="row g-3 mb-3">
                                 <div class="col-6 col-md-3">
                                     <div class="my-ticket-label">Ghế</div>
-                                    <div class="my-ticket-value"><?= h($booking['seat_numbers'] ?: '-') ?></div>
+                                    <?php
+                                        $seatList = array_values(array_filter(array_map('trim', explode(',', (string) ($booking['seat_numbers'] ?? '')))));
+                                        $visibleSeats = array_slice($seatList, 0, 8);
+                                        $hiddenSeatCount = max(0, count($seatList) - count($visibleSeats));
+                                    ?>
+                                    <div class="my-ticket-value" title="<?= h((string) ($booking['seat_numbers'] ?? '')) ?>">
+                                        <?= !empty($visibleSeats) ? h(implode(', ', $visibleSeats)) : '-' ?>
+                                        <?php if ($hiddenSeatCount > 0): ?>
+                                            <span class="text-secondary">+<?= $hiddenSeatCount ?> ghế</span>
+                                        <?php endif; ?>
+                                    </div>
                                 </div>
                                 <div class="col-6 col-md-3">
                                     <div class="my-ticket-label">Số lượng vé</div>

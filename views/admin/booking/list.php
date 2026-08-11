@@ -106,7 +106,17 @@ $keyword = $_GET['keyword'] ?? '';
                                 <td><?= date('d/m/Y H:i', strtotime($booking['start_time'])) ?></td>
                                 <td>
                                     <?php if (!empty($booking['seat_numbers'])): ?>
-                                        <span class="badge text-bg-secondary"><?= htmlspecialchars($booking['seat_numbers']) ?></span>
+                                        <?php
+                                            $seatList = array_values(array_filter(array_map('trim', explode(',', (string) $booking['seat_numbers']))));
+                                            $visibleSeats = array_slice($seatList, 0, 8);
+                                            $hiddenSeatCount = max(0, count($seatList) - count($visibleSeats));
+                                        ?>
+                                        <span class="badge text-bg-secondary" title="<?= htmlspecialchars((string) $booking['seat_numbers']) ?>">
+                                            <?= htmlspecialchars(implode(', ', $visibleSeats)) ?>
+                                            <?php if ($hiddenSeatCount > 0): ?>
+                                                <span class="ms-1">+<?= $hiddenSeatCount ?> ghế</span>
+                                            <?php endif; ?>
+                                        </span>
                                     <?php else: ?>
                                         <span class="text-muted small">Chưa xếp ghế</span>
                                     <?php endif; ?>

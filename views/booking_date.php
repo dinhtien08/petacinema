@@ -779,24 +779,29 @@
                 seatButton.classList.toggle('is-selected', isTargetSelecting);
             }
 
-            // 4. Kiểm tra ghế cô lập (No isolated seats rule)
-            if (!checkClientNoIsolatedSeats()) {
-                // Revert toggle
-                if (coupleGroup) {
-                    const coupleButtons = [...document.querySelectorAll('.client-seat[data-couple-group]:not(:disabled)')]
-                        .filter((b) => b.dataset.coupleGroup === coupleGroup);
-                    coupleButtons.forEach((b) => b.classList.toggle('is-selected', !isTargetSelecting));
-                } else {
-                    seatButton.classList.toggle('is-selected', !isTargetSelecting);
-                }
-
-                alert('Lựa chọn này sẽ tạo ra một ghế trống bị cô lập. Vui lòng chọn lại.');
-                updateSelectedSeatSummary();
-                return;
-            }
-
+            // Không kiểm tra ghế cô lập ngay sau từng cú click.
+            // Người dùng cần được phép tạo trạng thái tạm thời, ví dụ chọn A1 trước rồi chọn A2.
+            // Luật ghế cô lập chỉ được kiểm tra khi người dùng bấm TIẾP TỤC.
             updateSelectedSeatSummary();
         });
+    });
+
+    const seatSelectionForm = document.getElementById('seat-selection-form');
+    seatSelectionForm?.addEventListener('submit', (event) => {
+        const selectedButtons = [...document.querySelectorAll('.client-seat[data-seat-number].is-selected')];
+
+        if (selectedButtons.length === 0) {
+            event.preventDefault();
+            alert('Vui lòng chọn ít nhất một ghế.');
+            return;
+        }
+
+        // Chỉ kiểm tra luật ghế cô lập trên lựa chọn cuối cùng.
+        // Nhờ vậy có thể chọn lần lượt A1 rồi A2 dù trạng thái trung gian chỉ mới chọn A1.
+        if (!checkClientNoIsolatedSeats()) {
+            event.preventDefault();
+            alert('Lựa chọn hiện tại sẽ để lại một ghế trống bị cô lập. Vui lòng chọn thêm hoặc đổi ghế trước khi tiếp tục.');
+        }
     });
 
     // Khôi phục các ghế đã chọn nếu khách quay lại từ bước chọn đồ ăn.
