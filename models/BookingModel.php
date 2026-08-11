@@ -472,12 +472,7 @@ class BookingModel extends BaseModel
                 throw new InvalidArgumentException('Suất chiếu không tồn tại.');
             }
 
-            $seats = $this->getSeatsForBooking($showtimeId, (int) $showtime['room_id'], $seatNumbers);
-            if (count($seats) !== count($seatNumbers)) {
-                throw new InvalidArgumentException('Có ghế không tồn tại, không thuộc phòng hoặc đã được đặt.');
-            }
-
-            $this->validateCoupleSeats($seats);
+            $seats = $this->validateAndLockSeatsForBooking($showtimeId, (int) $showtime['room_id'], $seatNumbers, $showtime);
             $foods = $this->getFoodsForBooking($foodQuantities);
 
             $ticketTotal = 0;
@@ -671,22 +666,114 @@ class BookingModel extends BaseModel
         return $stmt->fetch();
     }
 
-    private function getSeatsForBooking(int $showtimeId, int $roomId, array $seatNumbers): array
+    /**
+     * Hàm helper công khai để controller/view validate danh sách ghế chọn trước khi chuyển bước hoặc thanh toán.
+     */
+    public function validateSeatSelection(int $showtimeId, array $seatNumbers): array
     {
-        $placeholders = implode(',', array_fill(0, count($seatNumbers), '?'));
+        $isOwnTransaction = false;
+        if (!$this->pdo->inTransaction()) {
+            $this->pdo->beginTransaction();
+            $isOwnTransaction = true;
+        }
 
-        $sql = "SELECT s.id, s.seat_number, s.couple_group, s.status,
+        try {
+            $showtime = $this->getShowtimeForBooking($showtimeId);
+            if (!$showtime) {
+                throw new InvalidArgumentException('Suất chiếu không tồn tại.');
+            }
+
+            $seats = $this->validateAndLockSeatsForBooking($showtimeId, (int) $showtime['room_id'], $seatNumbers, $showtime);
+
+            if ($isOwnTransaction) {
+                $this->pdo->commit();
+            }
+
+            return $seats;
+        } catch (Throwable $e) {
+            if ($isOwnTransaction && $this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    private function validateAndLockSeatsForBooking(int $showtimeId, int $roomId, array $seatNumbers, array $showtime): array
+    {
+        $seatNumbers = array_values(array_unique(array_filter(array_map(
+            static fn($seat) => strtoupper(trim((string) $seat)),
+            $seatNumbers
+        ))));
+
+        if (empty($seatNumbers)) {
+            throw new InvalidArgumentException('Vui lòng chọn ít nhất một ghế.');
+        }
+
+        $maxSeats = defined('MAX_SEATS_PER_BOOKING') ? (int) MAX_SEATS_PER_BOOKING : 8;
+        if (count($seatNumbers) > $maxSeats) {
+            throw new InvalidArgumentException("Bạn chỉ được chọn tối đa {$maxSeats} ghế trong một lần đặt.");
+        }
+
+        if (strtotime((string) ($showtime['start_time'] ?? '')) <= time()) {
+            throw new InvalidArgumentException('Suất chiếu đã bắt đầu, không thể đặt vé.');
+        }
+
+        // seat_number (A1, A2, ...) chỉ duy nhất bên trong từng phòng, không duy nhất toàn rạp.
+        // Vì vậy bắt buộc lọc theo room_id ngay trong truy vấn để tránh lấy nhầm A1/A2 của phòng khác.
+        $placeholders = implode(',', array_fill(0, count($seatNumbers), '?'));
+        $sql = "SELECT s.id, s.room_id, s.seat_type_id, s.seat_number, s.row_char, s.col_num, s.couple_group, s.status,
                        st.name AS seat_type_name, st.surcharge
                 FROM seats s
                 JOIN seat_types st ON st.id = s.seat_type_id
                 WHERE s.room_id = ?
-                  AND s.status = 'available'
                   AND s.seat_number IN ($placeholders)
-                  AND NOT EXISTS (
-                      SELECT 1
+                FOR UPDATE";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute(array_merge([$roomId], $seatNumbers));
+        $foundSeats = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $foundSeatsByNumber = [];
+        foreach ($foundSeats as $s) {
+            $foundSeatsByNumber[$s['seat_number']] = $s;
+        }
+
+        foreach ($seatNumbers as $requestedNumber) {
+            if (!isset($foundSeatsByNumber[$requestedNumber])) {
+                $checkRoomStmt = $this->pdo->prepare("SELECT room_id FROM seats WHERE seat_number = :sn LIMIT 1");
+                $checkRoomStmt->execute([':sn' => $requestedNumber]);
+                $otherRoomSeat = $checkRoomStmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($otherRoomSeat && (int) $otherRoomSeat['room_id'] !== $roomId) {
+                    throw new InvalidArgumentException('Phát hiện ghế không thuộc phòng của suất chiếu.');
+                }
+
+                throw new InvalidArgumentException("Ghế {$requestedNumber} không tồn tại trong hệ thống.");
+            }
+
+            $seat = $foundSeatsByNumber[$requestedNumber];
+            if ((int) $seat['room_id'] !== $roomId) {
+                throw new InvalidArgumentException('Phát hiện ghế không thuộc phòng của suất chiếu.');
+            }
+
+            if (($seat['status'] ?? '') !== 'available') {
+                throw new InvalidArgumentException("Ghế {$requestedNumber} không còn khả dụng.");
+            }
+        }
+
+        $selectedSeats = [];
+        foreach ($seatNumbers as $requestedNumber) {
+            $selectedSeats[] = $foundSeatsByNumber[$requestedNumber];
+        }
+
+        $seatIds = array_column($selectedSeats, 'id');
+        $idPlaceholders = implode(',', array_fill(0, count($seatIds), '?'));
+
+        $bookedSql = "SELECT s.seat_number
                       FROM tickets t
                       JOIN bookings b ON b.id = t.booking_id
-                      WHERE t.seat_id = s.id
+                      JOIN seats s ON s.id = t.seat_id
+                      WHERE t.seat_id IN ($idPlaceholders)
                         AND b.showtime_id = ?
                         AND (
                             b.status = 'paid'
@@ -694,17 +781,33 @@ class BookingModel extends BaseModel
                                 b.status = 'pending'
                                 AND b.created_at > DATE_SUB(NOW(), INTERVAL 5 MINUTE)
                             )
-                        )
-                  )
-                FOR UPDATE";
+                        )";
 
-        $params = array_merge([$roomId], $seatNumbers, [$showtimeId]);
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $bookedStmt = $this->pdo->prepare($bookedSql);
+        $bookedStmt->execute(array_merge($seatIds, [$showtimeId]));
+        $alreadyBooked = $bookedStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (!empty($alreadyBooked)) {
+            $firstBooked = $alreadyBooked[0]['seat_number'] ?? '';
+            throw new InvalidArgumentException("Ghế {$firstBooked} không còn khả dụng.");
+        }
+
+        $this->validateSameSeatType($selectedSeats);
+        $this->validateCoupleSeats($selectedSeats, $roomId);
+        $this->validateNoIsolatedSeats($showtimeId, $roomId, $selectedSeats);
+
+        return $selectedSeats;
     }
 
-    private function validateCoupleSeats(array $selectedSeats): void
+    private function validateSameSeatType(array $selectedSeats): void
+    {
+        $typeIds = array_values(array_unique(array_column($selectedSeats, 'seat_type_id')));
+        if (count($typeIds) > 1) {
+            throw new InvalidArgumentException('Các ghế được chọn phải cùng một loại ghế.');
+        }
+    }
+
+    private function validateCoupleSeats(array $selectedSeats, int $roomId): void
     {
         $selectedByGroup = [];
 
@@ -722,15 +825,127 @@ class BookingModel extends BaseModel
         }
 
         foreach ($selectedByGroup as $group => $selectedCount) {
+            // couple_group cũng chỉ có ý nghĩa trong phạm vi một phòng.
             $sql = "SELECT COUNT(*)
                     FROM seats
-                    WHERE couple_group = :couple_group";
+                    WHERE room_id = :room_id
+                      AND couple_group = :couple_group";
             $stmt = $this->pdo->prepare($sql);
-            $stmt->execute([':couple_group' => $group]);
+            $stmt->execute([
+                ':room_id' => $roomId,
+                ':couple_group' => $group,
+            ]);
             $totalInGroup = (int) $stmt->fetchColumn();
 
             if ($selectedCount !== $totalInGroup) {
-                throw new InvalidArgumentException('Ghế Couple phải chọn đủ cả cặp.');
+                throw new InvalidArgumentException('Ghế Couple phải được chọn đủ cả cặp.');
+            }
+        }
+    }
+
+    private function validateNoIsolatedSeats(int $showtimeId, int $roomId, array $selectedSeats): void
+    {
+        $sql = "SELECT s.id, s.seat_number, s.row_char, s.col_num, s.couple_group, s.status AS physical_status,
+                       (
+                           SELECT COUNT(*)
+                           FROM tickets t
+                           JOIN bookings b ON b.id = t.booking_id
+                           WHERE t.seat_id = s.id
+                             AND b.showtime_id = :showtime_id
+                             AND (
+                                 b.status = 'paid'
+                                 OR (
+                                     b.status = 'pending'
+                                     AND b.created_at > DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+                                 )
+                             )
+                       ) AS booked_count
+                FROM seats s
+                WHERE s.room_id = :room_id
+                ORDER BY s.row_char ASC, s.col_num ASC";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([
+            ':showtime_id' => $showtimeId,
+            ':room_id' => $roomId,
+        ]);
+        $roomSeats = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($roomSeats)) {
+            return;
+        }
+
+        $coupleGroupUnavailable = [];
+        foreach ($roomSeats as $seat) {
+            $isInitiallyAvailable = ($seat['physical_status'] === 'available') && ((int) $seat['booked_count'] === 0);
+            $group = trim((string) ($seat['couple_group'] ?? ''));
+            if (!$isInitiallyAvailable && $group !== '') {
+                $coupleGroupUnavailable[$group] = true;
+            }
+        }
+
+        $selectedSeatIds = array_flip(array_column($selectedSeats, 'id'));
+        $rows = [];
+
+        foreach ($roomSeats as $seat) {
+            $isInitiallyAvailable = ($seat['physical_status'] === 'available') && ((int) $seat['booked_count'] === 0);
+            $group = trim((string) ($seat['couple_group'] ?? ''));
+
+            if ($group !== '' && isset($coupleGroupUnavailable[$group])) {
+                $isInitiallyAvailable = false;
+            }
+
+            $isPostAvailable = $isInitiallyAvailable && !isset($selectedSeatIds[$seat['id']]);
+            $rowChar = (string) $seat['row_char'];
+
+            $rows[$rowChar][] = [
+                'id' => (int) $seat['id'],
+                'seat_number' => $seat['seat_number'],
+                'col_num' => (int) $seat['col_num'],
+                'post_available' => $isPostAvailable,
+            ];
+        }
+
+        foreach ($rows as $rowChar => $seatsInRow) {
+            usort($seatsInRow, fn($a, $b) => $a['col_num'] <=> $b['col_num']);
+
+            $blocks = [];
+            $currentBlock = [];
+
+            foreach ($seatsInRow as $seat) {
+                if (empty($currentBlock)) {
+                    $currentBlock[] = $seat;
+                } else {
+                    $lastCol = $currentBlock[count($currentBlock) - 1]['col_num'];
+                    if ($seat['col_num'] === $lastCol + 1) {
+                        $currentBlock[] = $seat;
+                    } else {
+                        $blocks[] = $currentBlock;
+                        $currentBlock = [$seat];
+                    }
+                }
+            }
+            if (!empty($currentBlock)) {
+                $blocks[] = $currentBlock;
+            }
+
+            foreach ($blocks as $block) {
+                $currentAvailableRun = [];
+
+                foreach ($block as $seat) {
+                    if ($seat['post_available']) {
+                        $currentAvailableRun[] = $seat;
+                    } else {
+                        if (count($currentAvailableRun) === 1) {
+                            throw new InvalidArgumentException('Lựa chọn này sẽ tạo ra một ghế trống bị cô lập. Vui lòng chọn lại.');
+                        }
+                        $currentAvailableRun = [];
+                    }
+                }
+
+                if (count($currentAvailableRun) === 1) {
+                    throw new InvalidArgumentException('Lựa chọn này sẽ tạo ra một ghế trống bị cô lập. Vui lòng chọn lại.');
+                }
             }
         }
     }
@@ -764,21 +979,12 @@ class BookingModel extends BaseModel
                 throw new InvalidArgumentException('Suất chiếu không tồn tại.');
             }
 
-            if (strtotime((string) $showtime['start_time']) <= time()) {
-                throw new InvalidArgumentException('Suất chiếu đã bắt đầu, không thể đặt vé.');
-            }
-
-            $seats = $this->getSeatsForBooking(
+            $seats = $this->validateAndLockSeatsForBooking(
                 $showtimeId,
                 (int) $showtime['room_id'],
-                $seatNumbers
+                $seatNumbers,
+                $showtime
             );
-
-            if (count($seats) !== count($seatNumbers)) {
-                throw new InvalidArgumentException('Một hoặc nhiều ghế vừa được khách khác giữ/đặt. Vui lòng chọn lại.');
-            }
-
-            $this->validateCoupleSeats($seats);
             $foods = $this->getFoodsForBooking($foodQuantities);
 
             $ticketTotal = 0.0;

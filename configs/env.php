@@ -53,3 +53,7 @@ define(
 
 define('VNPAY_PAYMENT_TIMEOUT_MINUTES', 5);
 
+// Giới hạn số lượng ghế tối đa trong 1 lần đặt vé
+define('MAX_SEATS_PER_BOOKING', 8);
+
+
