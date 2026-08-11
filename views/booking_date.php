@@ -86,44 +86,18 @@
     ) {
         $seatNumbers = preg_split('/[\s,;]+/', strtoupper(trim((string) ($_POST['seat_numbers'] ?? ''))));
         $seatNumbers = array_values(array_unique(array_filter(array_map('trim', $seatNumbers))));
-        $seatByNumber = [];
-        foreach ($showtimeSeats as $seat) {
-            $seatByNumber[$seat['seat_number']] = $seat;
-        }
 
-        if (empty($seatNumbers)) {
-            $comboError = 'Vui lòng chọn ít nhất một ghế trước khi chọn combo.';
-        } else {
-            foreach ($seatNumbers as $seatNumber) {
-                $seat = $seatByNumber[$seatNumber] ?? null;
-                if (!$seat || ($seat['display_status'] ?? '') !== 'available') {
-                    $comboError = 'Một hoặc nhiều ghế đã chọn không còn khả dụng. Vui lòng chọn lại.';
-                    break;
-                }
-                $selectedSeatsForCombo[] = $seat;
-            }
-        }
-
-        if ($comboError === '') {
-            $selectedSeatNumbers = array_flip(array_column($selectedSeatsForCombo, 'seat_number'));
-            foreach ($selectedSeatsForCombo as $seat) {
-                if (($seat['seat_type_name'] ?? '') !== 'Couple' || empty($seat['couple_group'])) {
-                    continue;
-                }
-                foreach ($showtimeSeats as $pairedSeat) {
-                    if (($pairedSeat['couple_group'] ?? '') === $seat['couple_group'] && !isset($selectedSeatNumbers[$pairedSeat['seat_number']])) {
-                        $comboError = 'Ghế Couple phải được chọn đầy đủ cả cặp.';
-                        break 2;
-                    }
-                }
-            }
-        }
-
-        if ($comboError === '') {
+        $bookingModelForCheck = new BookingModel();
+        try {
+            $selectedSeatsForCombo = $bookingModelForCheck->validateSeatSelection($selectedShowtimeId, $seatNumbers);
             foreach ($selectedSeatsForCombo as $seat) {
                 $ticketTotalForCombo += $seatPriceById[(int) $seat['id']] ?? 0;
             }
             $showComboStep = true;
+        } catch (InvalidArgumentException $e) {
+            $comboError = $e->getMessage();
+        } catch (Throwable $e) {
+            $comboError = 'Lựa chọn ghế không hợp lệ: ' . $e->getMessage();
         }
     }
 ?>
@@ -676,17 +650,149 @@
         }
     };
 
+    const MAX_SEATS_PER_BOOKING = <?= defined('MAX_SEATS_PER_BOOKING') ? (int) MAX_SEATS_PER_BOOKING : 8 ?>;
+
+    const checkClientNoIsolatedSeats = () => {
+        const seatButtons = [...document.querySelectorAll('.client-seat[data-seat-number]')];
+        const rows = new Map();
+
+        seatButtons.forEach((btn) => {
+            const seatNum = btn.dataset.seatNumber || '';
+            const match = seatNum.match(/^([A-Za-z]+)(\d+)$/);
+            if (!match) return;
+            const rowChar = match[1].toUpperCase();
+            const colNum = parseInt(match[2], 10);
+            const coupleGroup = btn.dataset.coupleGroup || '';
+            const isBookedOrMaint = btn.disabled || btn.classList.contains('client-seat-booked') || btn.classList.contains('client-seat-maintenance');
+            const isSelected = btn.classList.contains('is-selected');
+
+            if (!rows.has(rowChar)) {
+                rows.set(rowChar, []);
+            }
+            rows.get(rowChar).push({
+                btn,
+                seatNum,
+                colNum,
+                coupleGroup,
+                isBookedOrMaint,
+                isSelected
+            });
+        });
+
+        const coupleGroupUnavailable = new Set();
+        rows.forEach((seats) => {
+            seats.forEach((seat) => {
+                if (seat.coupleGroup && seat.isBookedOrMaint) {
+                    coupleGroupUnavailable.add(seat.coupleGroup);
+                }
+            });
+        });
+
+        for (const [rowChar, seats] of rows.entries()) {
+            seats.sort((a, b) => a.colNum - b.colNum);
+
+            const blocks = [];
+            let currentBlock = [];
+
+            seats.forEach((seat) => {
+                if (currentBlock.length === 0) {
+                    currentBlock.push(seat);
+                } else {
+                    const prev = currentBlock[currentBlock.length - 1];
+                    if (seat.colNum === prev.colNum + 1) {
+                        currentBlock.push(seat);
+                    } else {
+                        blocks.push(currentBlock);
+                        currentBlock = [seat];
+                    }
+                }
+            });
+            if (currentBlock.length > 0) {
+                blocks.push(currentBlock);
+            }
+
+            for (const block of blocks) {
+                let currentAvailableRun = [];
+
+                for (const seat of block) {
+                    const isInitiallyAvailable = !seat.isBookedOrMaint && (!seat.coupleGroup || !coupleGroupUnavailable.has(seat.coupleGroup));
+                    const isPostAvailable = isInitiallyAvailable && !seat.isSelected;
+
+                    if (isPostAvailable) {
+                        currentAvailableRun.push(seat);
+                    } else {
+                        if (currentAvailableRun.length === 1) {
+                            return false;
+                        }
+                        currentAvailableRun = [];
+                    }
+                }
+
+                if (currentAvailableRun.length === 1) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    };
+
     document.querySelectorAll('.client-seat[data-seat-number]:not(:disabled)').forEach((seatButton) => {
         seatButton.addEventListener('click', () => {
             const coupleGroup = seatButton.dataset.coupleGroup || '';
+            const seatType = seatButton.dataset.seatType || 'Standard';
 
+            const currentlySelected = [...document.querySelectorAll('.client-seat[data-seat-number].is-selected')];
+            const isTargetSelecting = coupleGroup
+                ? ![...document.querySelectorAll('.client-seat[data-couple-group]:not(:disabled)')]
+                    .filter((b) => b.dataset.coupleGroup === coupleGroup)
+                    .every((b) => b.classList.contains('is-selected'))
+                : !seatButton.classList.contains('is-selected');
+
+            // 1. Kiểm tra loại ghế (Same seat type rule)
+            if (isTargetSelecting && currentlySelected.length > 0) {
+                const currentType = currentlySelected[0].dataset.seatType || 'Standard';
+                if (seatType !== currentType) {
+                    alert('Các ghế được chọn phải cùng một loại ghế.');
+                    return;
+                }
+            }
+
+            // 2. Kiểm tra giới hạn số lượng ghế (Max seats rule)
+            if (isTargetSelecting) {
+                const additionalCount = coupleGroup
+                    ? [...document.querySelectorAll('.client-seat[data-couple-group]:not(:disabled)')]
+                        .filter((b) => b.dataset.coupleGroup === coupleGroup && !b.classList.contains('is-selected')).length
+                    : 1;
+
+                if (currentlySelected.length + additionalCount > MAX_SEATS_PER_BOOKING) {
+                    alert(`Bạn chỉ được chọn tối đa ${MAX_SEATS_PER_BOOKING} ghế trong một lần đặt.`);
+                    return;
+                }
+            }
+
+            // 3. Thực hiện toggle trạng thái chọn
             if (coupleGroup) {
                 const coupleButtons = [...document.querySelectorAll('.client-seat[data-couple-group]:not(:disabled)')]
-                    .filter((button) => button.dataset.coupleGroup === coupleGroup);
-                const shouldSelect = !coupleButtons.every((button) => button.classList.contains('is-selected'));
-                coupleButtons.forEach((button) => button.classList.toggle('is-selected', shouldSelect));
+                    .filter((b) => b.dataset.coupleGroup === coupleGroup);
+                coupleButtons.forEach((b) => b.classList.toggle('is-selected', isTargetSelecting));
             } else {
-                seatButton.classList.toggle('is-selected');
+                seatButton.classList.toggle('is-selected', isTargetSelecting);
+            }
+
+            // 4. Kiểm tra ghế cô lập (No isolated seats rule)
+            if (!checkClientNoIsolatedSeats()) {
+                // Revert toggle
+                if (coupleGroup) {
+                    const coupleButtons = [...document.querySelectorAll('.client-seat[data-couple-group]:not(:disabled)')]
+                        .filter((b) => b.dataset.coupleGroup === coupleGroup);
+                    coupleButtons.forEach((b) => b.classList.toggle('is-selected', !isTargetSelecting));
+                } else {
+                    seatButton.classList.toggle('is-selected', !isTargetSelecting);
+                }
+
+                alert('Lựa chọn này sẽ tạo ra một ghế trống bị cô lập. Vui lòng chọn lại.');
+                updateSelectedSeatSummary();
+                return;
             }
 
             updateSelectedSeatSummary();
